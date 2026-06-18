@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FnB Daily Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg:      #0f172a;
+      --card:    #1e293b;
+      --border:  #334155;
+      --text:    #f1f5f9;
+      --muted:   #94a3b8;
+      --green:   #10b981;
+      --red:     #ef4444;
+      --amber:   #f59e0b;
+      --indigo:  #6366f1;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+      padding: 20px 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    header h1 { font-size: 1.35rem; font-weight: 700; letter-spacing: -0.01em; }
+    header p  { font-size: 0.8rem; opacity: 0.75; margin-top: 2px; }
+
+    .btn-refresh {
+      background: rgba(255,255,255,0.15);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.3);
+      padding: 8px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: background 0.2s;
+      white-space: nowrap;
+    }
+    .btn-refresh:hover { background: rgba(255,255,255,0.25); }
+
+    /* ── Layout ── */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px 16px;
+    }
+
+    /* ── Period filter ── */
+    .filter-bar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .filter-btn {
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 6px 14px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      transition: all 0.2s;
+    }
+    .filter-btn.active {
+      background: var(--indigo);
+      border-color: var(--indigo);
+      color: #fff;
+    }
+
+    /* ── Stat Cards ── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px;
+      position: relative;
+      overflow: hidden;
+    }
+    .stat-card::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      border-radius: 14px 14px 0 0;
+    }
+    .stat-card.c-green::after  { background: var(--green); }
+    .stat-card.c-indigo::after { background: var(--indigo); }
+    .stat-card.c-red::after    { background: var(--red); }
+    .stat-card.c-amber::after  { background: var(--amber); }
+    .stat-card.c-grad::after   { background: linear-gradient(90deg, var(--indigo), var(--green)); }
+
+    .stat-card .icon  { font-size: 1.4rem; margin-bottom: 8px; }
+    .stat-card .label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+    .stat-card .value { font-size: 1.4rem; font-weight: 700; margin-top: 2px; line-height: 1.2; }
+    .stat-card .sub   { font-size: 0.72rem; color: var(--muted); margin-top: 6px; }
+
+    /* ── Charts ── */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+    @media (max-width: 700px) { .charts-grid { grid-template-columns: 1fr; } }
+
+    .chart-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px;
+    }
+    .chart-card h3 {
+      font-size: 0.75rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 16px;
+    }
+
+    /* ── Table ── */
+    .table-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px;
+      overflow-x: auto;
+    }
+    .table-card h3 {
+      font-size: 0.75rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 16px;
+    }
+
+    table { width: 100%; border-collapse: collapse; min-width: 580px; }
+    th, td { padding: 11px 14px; text-align: left; font-size: 0.85rem; }
+    th {
+      color: var(--muted);
+      font-weight: 600;
+      font-size: 0.75rem;
+      border-bottom: 1px solid var(--border);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    td { border-bottom: 1px solid rgba(51,65,85,0.5); vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(99,102,241,0.04); }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .badge-green { background: rgba(16,185,129,0.15); color: var(--green); }
+    .badge-red   { background: rgba(239,68,68,0.15);  color: var(--red); }
+
+    /* ── Empty / Loading ── */
+    .placeholder {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    .placeholder .big { font-size: 2rem; margin-bottom: 8px; }
+
+    .section-title {
+      font-size: 0.75rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 12px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>🍽️ FnB Daily Dashboard</h1>
+    <p id="last-updated">Loading data…</p>
+  </div>
+  <button class="btn-refresh" onclick="loadData()">🔄 Refresh</button>
+</header>
+
+<div class="container">
+
+  <!-- Period filter -->
+  <div class="filter-bar">
+    <button class="filter-btn active" onclick="setFilter(7,  this)">Last 7 days</button>
+    <button class="filter-btn"        onclick="setFilter(14, this)">Last 14 days</button>
+    <button class="filter-btn"        onclick="setFilter(30, this)">Last 30 days</button>
+    <button class="filter-btn"        onclick="setFilter(0,  this)">All time</button>
+  </div>
+
+  <!-- Stat cards -->
+  <div class="stats-grid" id="stats-grid">
+    <div class="placeholder">Loading…</div>
+  </div>
+
+  <!-- Charts -->
+  <div class="charts-grid">
+    <div class="chart-card">
+      <h3>📈 Revenue Trend</h3>
+      <canvas id="revenueChart" height="180"></canvas>
+    </div>
+    <div class="chart-card">
+      <h3>📊 Revenue vs Losses vs Wastage</h3>
+      <canvas id="breakdownChart" height="180"></canvas>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="table-card">
+    <h3>📋 Recent Entries</h3>
+    <div id="table-container">
+      <div class="placeholder">Loading…</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  let allEntries = [];
+  let filterDays = 7;
+  let revenueChart, breakdownChart;
+
+  // ── Helpers ────────────────────────────────────────────────
+  const fmtRM   = v => `RM ${Number(v).toFixed(2)}`;
+  const fmtDate = s => new Date(s + 'T00:00:00').toLocaleDateString('en-MY', {
+    day: '2-digit', month: 'short', year: 'numeric'
+  });
+  const fmtShort = s => new Date(s + 'T00:00:00').toLocaleDateString('en-MY', {
+    day: 'numeric', month: 'short'
+  });
+
+  const CHART_OPTS = {
+    responsive: true,
+    plugins: { legend: { labels: { color: '#94a3b8', font: { size: 11 } } } },
+    scales: {
+      x: { ticks: { color: '#94a3b8', font: { size: 11 } }, grid: { color: '#1e293b' } },
+      y: { ticks: { color: '#94a3b8', font: { size: 11 } }, grid: { color: '#334155' } }
+    }
+  };
+
+  // ── Filter ─────────────────────────────────────────────────
+  function setFilter(days, btn) {
+    filterDays = days;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    render(allEntries);
+  }
+
+  function getFiltered(entries) {
+    if (!filterDays) return entries;
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - filterDays);
+    return entries.filter(e => new Date(e.date) >= cutoff);
+  }
+
+  // ── Fetch data ─────────────────────────────────────────────
+  async function loadData() {
+    try {
+      const res = await fetch('/api/data');
+      const json = await res.json();
+      allEntries = (json.entries || []).sort((a, b) => new Date(a.date) - new Date(b.date));
+      render(allEntries);
+      document.getElementById('last-updated').textContent =
+        `Updated: ${new Date().toLocaleTimeString('en-MY')} · ${allEntries.length} total entries`;
+    } catch {
+      document.getElementById('stats-grid').innerHTML =
+        '<div class="placeholder"><div class="big">❌</div>Could not load data.<br>Make sure the server is running.</div>';
+    }
+  }
+
+  // ── Main render ────────────────────────────────────────────
+  function render(entries) {
+    const filtered = getFiltered(entries);
+    renderStats(filtered, entries);
+    renderCharts(filtered);
+    renderTable(filtered);
+  }
+
+  // ── Stats cards ────────────────────────────────────────────
+  function renderStats(filtered, all) {
+    if (all.length === 0) {
+      document.getElementById('stats-grid').innerHTML =
+        '<div class="placeholder" style="grid-column:1/-1"><div class="big">📭</div>' +
+        'No entries yet.<br>Start logging from your Telegram bot!</div>';
+      return;
+    }
+
+    const sum = (arr, key) => arr.reduce((a, e) => a + (e[key] || 0), 0);
+
+    const revenue  = sum(filtered, 'revenue');
+    const sales    = sum(filtered, 'sales');
+    const losses   = sum(filtered, 'losses');
+    const wastage  = sum(filtered, 'wastage');
+    const net      = revenue - losses - wastage;
+    const days     = filtered.length || 1;
+    const latest   = filtered[filtered.length - 1];
+
+    document.getElementById('stats-grid').innerHTML = `
+      <div class="stat-card c-green">
+        <div class="icon">💰</div>
+        <div class="label">Revenue</div>
+        <div class="value">${fmtRM(revenue)}</div>
+        <div class="sub">Avg ${fmtRM(revenue / days)}/day · ${days} day${days !== 1 ? 's' : ''}</div>
+      </div>
+      <div class="stat-card c-indigo">
+        <div class="icon">🛒</div>
+        <div class="label">Transactions</div>
+        <div class="value">${sales.toLocaleString()}</div>
+        <div class="sub">Avg ${(sales / days).toFixed(1)}/day</div>
+      </div>
+      <div class="stat-card c-red">
+        <div class="icon">📉</div>
+        <div class="label">Losses</div>
+        <div class="value">${fmtRM(losses)}</div>
+        <div class="sub">${revenue > 0 ? ((losses / revenue) * 100).toFixed(1) : 0}% of revenue</div>
+      </div>
+      <div class="stat-card c-amber">
+        <div class="icon">🗑️</div>
+        <div class="label">Wastage</div>
+        <div class="value">${fmtRM(wastage)}</div>
+        <div class="sub">${revenue > 0 ? ((wastage / revenue) * 100).toFixed(1) : 0}% of revenue</div>
+      </div>
+      <div class="stat-card c-grad">
+        <div class="icon">📊</div>
+        <div class="label">Net Profit</div>
+        <div class="value" style="color:${net >= 0 ? 'var(--green)' : 'var(--red)'}">${fmtRM(net)}</div>
+        <div class="sub">${revenue > 0 ? ((net / revenue) * 100).toFixed(1) : 0}% margin</div>
+      </div>
+    `;
+  }
+
+  // ── Charts ─────────────────────────────────────────────────
+  function renderCharts(entries) {
+    const labels = entries.map(e => fmtShort(e.date));
+
+    // Revenue Trend (line)
+    const rCtx = document.getElementById('revenueChart').getContext('2d');
+    if (revenueChart) revenueChart.destroy();
+    revenueChart = new Chart(rCtx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Revenue (RM)',
+          data: entries.map(e => e.revenue),
+          borderColor: '#10b981',
+          backgroundColor: 'rgba(16,185,129,0.1)',
+          fill: true,
+          tension: 0.4,
+          pointBackgroundColor: '#10b981',
+          pointRadius: entries.length > 20 ? 2 : 4,
+        }]
+      },
+      options: { ...CHART_OPTS, plugins: { legend: { display: false } } }
+    });
+
+    // Breakdown (bar)
+    const bCtx = document.getElementById('breakdownChart').getContext('2d');
+    if (breakdownChart) breakdownChart.destroy();
+    breakdownChart = new Chart(bCtx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          { label: 'Revenue',  data: entries.map(e => e.revenue),  backgroundColor: 'rgba(16,185,129,0.75)' },
+          { label: 'Losses',   data: entries.map(e => e.losses),   backgroundColor: 'rgba(239,68,68,0.75)' },
+          { label: 'Wastage',  data: entries.map(e => e.wastage),  backgroundColor: 'rgba(245,158,11,0.75)' },
+        ]
+      },
+      options: CHART_OPTS
+    });
+  }
+
+  // ── Table ──────────────────────────────────────────────────
+  function renderTable(entries) {
+    const recent = [...entries].reverse().slice(0, 15);
+
+    if (recent.length === 0) {
+      document.getElementById('table-container').innerHTML =
+        '<div class="placeholder">No entries in this period.</div>';
+      return;
+    }
+
+    const rows = recent.map(e => {
+      const net      = e.revenue - e.losses - e.wastage;
+      const badgeCls = net >= 0 ? 'badge-green' : 'badge-red';
+      const avgTxn   = e.sales > 0 ? (e.revenue / e.sales).toFixed(2) : '—';
+      return `
+        <tr>
+          <td>${fmtDate(e.date)}</td>
+          <td>${fmtRM(e.revenue)}</td>
+          <td>${e.sales}</td>
+          <td>RM ${avgTxn}</td>
+          <td>${fmtRM(e.losses)}</td>
+          <td>${fmtRM(e.wastage)}</td>
+          <td><span class="badge ${badgeCls}">${fmtRM(net)}</span></td>
+          <td style="color:var(--muted);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.notes || '—'}</td>
+        </tr>`;
+    }).join('');
+
+    document.getElementById('table-container').innerHTML = `
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Revenue</th>
+            <th>Txn</th>
+            <th>Avg/Txn</th>
+            <th>Losses</th>
+            <th>Wastage</th>
+            <th>Net</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+  }
+
+  // ── Init ───────────────────────────────────────────────────
+  loadData();
+  setInterval(loadData, 30_000); // Auto-refresh every 30 s
+</script>
+</body>
+</html>
