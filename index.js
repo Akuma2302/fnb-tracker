@@ -7,9 +7,9 @@ const path       = require('path');
 // ─────────────────────────────────────────
 //  Config
 // ─────────────────────────────────────────
-const BOT_TOKEN = process.env.BOT_TOKEN;
-const PORT      = process.env.PORT || 3000;
-const MONGO_URI = process.env.MONGO_URI;
+const BOT_TOKEN = "8901982392:AAG0arsfB59Yzpf2x8T3LZW2Jgf76B6m7lA";
+const PORT      = 3000;
+const MONGO_URI = "mongodb+srv://asyraaf2302_db_user:FJFJIu4hzUfpL2AU@cluster0.9jhroj0.mongodb.net/";
 
 if (!BOT_TOKEN || !MONGO_URI) {
   console.error('❌ Missing BOT_TOKEN or MONGO_URI — check your .env file');
