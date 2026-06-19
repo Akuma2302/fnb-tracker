@@ -1,201 +1,103 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>FnB Daily Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
     :root {
-      --bg:      #0f172a;
-      --card:    #1e293b;
-      --border:  #334155;
-      --text:    #f1f5f9;
-      --muted:   #94a3b8;
-      --green:   #10b981;
-      --red:     #ef4444;
-      --amber:   #f59e0b;
-      --indigo:  #6366f1;
+      --bg:     #0f172a;
+      --card:   #1e293b;
+      --border: #334155;
+      --text:   #f1f5f9;
+      --muted:  #94a3b8;
+      --green:  #10b981;
+      --red:    #ef4444;
+      --amber:  #f59e0b;
+      --indigo: #6366f1;
+      --purple: #a855f7;
     }
-
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-
-    body {
-      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Segoe UI',system-ui,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
 
     /* ── Header ── */
     header {
-      background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-      padding: 20px 28px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-      flex-wrap: wrap;
+      background: linear-gradient(135deg,#4f46e5,#7c3aed);
+      padding: 18px 28px;
+      display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;
     }
-    header h1 { font-size: 1.35rem; font-weight: 700; letter-spacing: -0.01em; }
-    header p  { font-size: 0.8rem; opacity: 0.75; margin-top: 2px; }
-
-    .btn-refresh {
-      background: rgba(255,255,255,0.15);
-      color: #fff;
-      border: 1px solid rgba(255,255,255,0.3);
-      padding: 8px 18px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 0.85rem;
-      transition: background 0.2s;
-      white-space: nowrap;
-    }
-    .btn-refresh:hover { background: rgba(255,255,255,0.25); }
+    header h1 { font-size:1.3rem; font-weight:700; }
+    header p  { font-size:0.78rem; opacity:0.75; margin-top:2px; }
+    .btn { background:rgba(255,255,255,0.15); color:#fff; border:1px solid rgba(255,255,255,0.3); padding:7px 16px; border-radius:8px; cursor:pointer; font-size:0.82rem; transition:background .2s; }
+    .btn:hover { background:rgba(255,255,255,0.25); }
 
     /* ── Layout ── */
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 24px 16px;
-    }
+    .container { max-width:1200px; margin:0 auto; padding:20px 16px; }
 
-    /* ── Period filter ── */
-    .filter-bar {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 20px;
-      flex-wrap: wrap;
-    }
+    /* ── Date Filter Bar ── */
+    .filter-bar { display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap; align-items:center; }
+    .filter-label { font-size:0.75rem; color:var(--muted); margin-right:4px; }
     .filter-btn {
-      background: var(--card);
-      border: 1px solid var(--border);
-      color: var(--muted);
-      padding: 6px 14px;
-      border-radius: 20px;
-      cursor: pointer;
-      font-size: 0.8rem;
-      transition: all 0.2s;
+      background:var(--card); border:1px solid var(--border); color:var(--muted);
+      padding:6px 14px; border-radius:20px; cursor:pointer; font-size:0.8rem; transition:all .2s;
     }
-    .filter-btn.active {
-      background: var(--indigo);
-      border-color: var(--indigo);
-      color: #fff;
+    .filter-btn.active { background:var(--indigo); border-color:var(--indigo); color:#fff; }
+
+    /* ── Date Range Picker ── */
+    .date-range { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-left:auto; }
+    .date-input {
+      background:var(--card); border:1px solid var(--border); color:var(--text);
+      padding:6px 10px; border-radius:8px; font-size:0.8rem; cursor:pointer;
     }
+    .date-input::-webkit-calendar-picker-indicator { filter:invert(1); cursor:pointer; }
+    .date-sep { color:var(--muted); font-size:0.8rem; }
 
     /* ── Stat Cards ── */
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-      gap: 14px;
-      margin-bottom: 20px;
-    }
-
-    .stat-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 18px;
-      position: relative;
-      overflow: hidden;
-    }
-    .stat-card::after {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 3px;
-      border-radius: 14px 14px 0 0;
-    }
-    .stat-card.c-green::after  { background: var(--green); }
-    .stat-card.c-indigo::after { background: var(--indigo); }
-    .stat-card.c-red::after    { background: var(--red); }
-    .stat-card.c-amber::after  { background: var(--amber); }
-    .stat-card.c-grad::after   { background: linear-gradient(90deg, var(--indigo), var(--green)); }
-
-    .stat-card .icon  { font-size: 1.4rem; margin-bottom: 8px; }
-    .stat-card .label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
-    .stat-card .value { font-size: 1.4rem; font-weight: 700; margin-top: 2px; line-height: 1.2; }
-    .stat-card .sub   { font-size: 0.72rem; color: var(--muted); margin-top: 6px; }
+    .stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(165px,1fr)); gap:12px; margin-bottom:18px; }
+    .stat-card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:16px; position:relative; overflow:hidden; }
+    .stat-card::after { content:''; position:absolute; top:0; left:0; right:0; height:3px; border-radius:12px 12px 0 0; }
+    .c-green::after  { background:var(--green);  }
+    .c-indigo::after { background:var(--indigo); }
+    .c-red::after    { background:var(--red);    }
+    .c-amber::after  { background:var(--amber);  }
+    .c-purple::after { background:var(--purple); }
+    .stat-card .icon  { font-size:1.3rem; margin-bottom:6px; }
+    .stat-card .label { font-size:0.68rem; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; }
+    .stat-card .value { font-size:1.35rem; font-weight:700; margin-top:2px; }
+    .stat-card .sub   { font-size:0.7rem; color:var(--muted); margin-top:5px; }
 
     /* ── Charts ── */
-    .charts-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-      margin-bottom: 20px;
-    }
-    @media (max-width: 700px) { .charts-grid { grid-template-columns: 1fr; } }
+    .charts-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:18px; }
+    @media(max-width:680px){ .charts-grid{grid-template-columns:1fr;} }
+    .chart-card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:18px; }
+    .chart-card h3 { font-size:0.72rem; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:14px; }
 
-    .chart-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 20px;
-    }
-    .chart-card h3 {
-      font-size: 0.75rem;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      margin-bottom: 16px;
-    }
+    /* ── SKU Breakdown Table ── */
+    .table-card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:18px; overflow-x:auto; margin-bottom:18px; }
+    .table-card h3 { font-size:0.72rem; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:14px; }
+    table { width:100%; border-collapse:collapse; min-width:520px; }
+    th,td { padding:10px 13px; text-align:left; font-size:0.83rem; }
+    th { color:var(--muted); font-weight:600; font-size:0.7rem; border-bottom:1px solid var(--border); text-transform:uppercase; letter-spacing:.04em; }
+    td { border-bottom:1px solid rgba(51,65,85,.45); vertical-align:middle; }
+    tr:last-child td { border-bottom:none; }
+    tr:hover td { background:rgba(99,102,241,.04); }
+    .badge { display:inline-block; padding:2px 9px; border-radius:20px; font-size:0.72rem; font-weight:600; }
+    .badge-green { background:rgba(16,185,129,.15); color:var(--green); }
+    .badge-red   { background:rgba(239,68,68,.15);  color:var(--red); }
+    .badge-amber { background:rgba(245,158,11,.15); color:var(--amber); }
 
-    /* ── Table ── */
-    .table-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 20px;
-      overflow-x: auto;
-    }
-    .table-card h3 {
-      font-size: 0.75rem;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      margin-bottom: 16px;
-    }
-
-    table { width: 100%; border-collapse: collapse; min-width: 580px; }
-    th, td { padding: 11px 14px; text-align: left; font-size: 0.85rem; }
-    th {
-      color: var(--muted);
-      font-weight: 600;
-      font-size: 0.75rem;
-      border-bottom: 1px solid var(--border);
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
-    td { border-bottom: 1px solid rgba(51,65,85,0.5); vertical-align: middle; }
-    tr:last-child td { border-bottom: none; }
-    tr:hover td { background: rgba(99,102,241,0.04); }
-
-    .badge {
-      display: inline-block;
-      padding: 3px 10px;
-      border-radius: 20px;
-      font-size: 0.75rem;
-      font-weight: 600;
-    }
-    .badge-green { background: rgba(16,185,129,0.15); color: var(--green); }
-    .badge-red   { background: rgba(239,68,68,0.15);  color: var(--red); }
+    /* ── SKU Summary Section ── */
+    .sku-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:10px; margin-bottom:18px; }
+    .sku-card { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:14px; }
+    .sku-card .sku-name  { font-size:0.8rem; font-weight:600; margin-bottom:6px; }
+    .sku-card .sku-price { font-size:0.7rem; color:var(--muted); margin-bottom:8px; }
+    .sku-card .sku-row   { display:flex; justify-content:space-between; font-size:0.75rem; padding:2px 0; }
+    .sku-card .sku-row .lbl { color:var(--muted); }
 
     /* ── Empty / Loading ── */
-    .placeholder {
-      text-align: center;
-      padding: 40px 20px;
-      color: var(--muted);
-      font-size: 0.9rem;
-    }
-    .placeholder .big { font-size: 2rem; margin-bottom: 8px; }
-
-    .section-title {
-      font-size: 0.75rem;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      margin-bottom: 12px;
-    }
+    .placeholder { text-align:center; padding:36px 16px; color:var(--muted); font-size:0.88rem; }
+    .placeholder .big { font-size:2rem; margin-bottom:8px; }
   </style>
 </head>
 <body>
@@ -203,228 +105,327 @@
 <header>
   <div>
     <h1>🍽️ FnB Daily Dashboard</h1>
-    <p id="last-updated">Loading data…</p>
+    <p id="last-updated">Loading…</p>
   </div>
-  <button class="btn-refresh" onclick="loadData()">🔄 Refresh</button>
+  <button class="btn" onclick="loadData()">🔄 Refresh</button>
 </header>
 
 <div class="container">
 
-  <!-- Period filter -->
+  <!-- ── Filter Bar ── -->
   <div class="filter-bar">
-    <button class="filter-btn active" onclick="setFilter(7,  this)">Last 7 days</button>
-    <button class="filter-btn"        onclick="setFilter(14, this)">Last 14 days</button>
-    <button class="filter-btn"        onclick="setFilter(30, this)">Last 30 days</button>
-    <button class="filter-btn"        onclick="setFilter(0,  this)">All time</button>
+    <span class="filter-label">Quick:</span>
+    <button class="filter-btn active" onclick="setQuickFilter('today',     this)">Today</button>
+    <button class="filter-btn"        onclick="setQuickFilter('yesterday', this)">Yesterday</button>
+    <button class="filter-btn"        onclick="setQuickFilter('3days',     this)">Last 3 Days</button>
+    <button class="filter-btn"        onclick="setQuickFilter('5days',     this)">Last 5 Days</button>
+    <button class="filter-btn"        onclick="setQuickFilter('all',       this)">All</button>
+
+    <!-- Calendar range picker -->
+    <div class="date-range">
+      <input type="date" id="dateFrom" class="date-input" onchange="setCustomRange()"/>
+      <span class="date-sep">→</span>
+      <input type="date" id="dateTo"   class="date-input" onchange="setCustomRange()"/>
+    </div>
   </div>
 
-  <!-- Stat cards -->
+  <!-- ── Stat Cards ── -->
   <div class="stats-grid" id="stats-grid">
     <div class="placeholder">Loading…</div>
   </div>
 
-  <!-- Charts -->
+  <!-- ── SKU Summary Cards ── -->
+  <div style="margin-bottom:8px; font-size:0.72rem; color:var(--muted); text-transform:uppercase; letter-spacing:.06em;">📦 SKU Performance</div>
+  <div class="sku-grid" id="sku-grid">
+    <div class="placeholder">Loading…</div>
+  </div>
+
+  <!-- ── Charts ── -->
   <div class="charts-grid">
     <div class="chart-card">
-      <h3>📈 Revenue Trend</h3>
-      <canvas id="revenueChart" height="180"></canvas>
+      <h3>📈 Daily Revenue Trend</h3>
+      <canvas id="revenueChart" height="190"></canvas>
     </div>
     <div class="chart-card">
-      <h3>📊 Revenue vs Losses vs Wastage</h3>
-      <canvas id="breakdownChart" height="180"></canvas>
+      <h3>📊 Revenue vs Gross Profit vs Wastage (by SKU)</h3>
+      <canvas id="skuChart" height="190"></canvas>
     </div>
   </div>
 
-  <!-- Table -->
+  <!-- ── Daily Summary Table ── -->
   <div class="table-card">
-    <h3>📋 Recent Entries</h3>
-    <div id="table-container">
-      <div class="placeholder">Loading…</div>
-    </div>
+    <h3>📋 Daily Log</h3>
+    <div id="table-container"><div class="placeholder">Loading…</div></div>
   </div>
 
 </div>
 
 <script>
   let allEntries = [];
-  let filterDays = 7;
-  let revenueChart, breakdownChart;
+  let skuDefs    = [];
+  let filterMode = 'today';    // active filter type
+  let customFrom = null;
+  let customTo   = null;
+  let revenueChart, skuChart;
 
-  // ── Helpers ────────────────────────────────────────────────
-  const fmtRM   = v => `RM ${Number(v).toFixed(2)}`;
-  const fmtDate = s => new Date(s + 'T00:00:00').toLocaleDateString('en-MY', {
-    day: '2-digit', month: 'short', year: 'numeric'
-  });
-  const fmtShort = s => new Date(s + 'T00:00:00').toLocaleDateString('en-MY', {
-    day: 'numeric', month: 'short'
-  });
+  // ── Format helpers ─────────────────────
+  const fmtRM    = v => `RM ${Number(v).toFixed(2)}`;
+  const fmtShort = s => new Date(s+'T00:00:00').toLocaleDateString('en-MY',{month:'short',day:'numeric'});
+  const fmtFull  = s => new Date(s+'T00:00:00').toLocaleDateString('en-MY',{day:'2-digit',month:'short',year:'numeric'});
+  const todayStr = () => new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Kuala_Lumpur'});
 
-  const CHART_OPTS = {
-    responsive: true,
-    plugins: { legend: { labels: { color: '#94a3b8', font: { size: 11 } } } },
-    scales: {
-      x: { ticks: { color: '#94a3b8', font: { size: 11 } }, grid: { color: '#1e293b' } },
-      y: { ticks: { color: '#94a3b8', font: { size: 11 } }, grid: { color: '#334155' } }
-    }
-  };
-
-  // ── Filter ─────────────────────────────────────────────────
-  function setFilter(days, btn) {
-    filterDays = days;
+  // ── Filter logic ───────────────────────
+  function setQuickFilter(mode, btn) {
+    filterMode  = mode;
+    customFrom  = null;
+    customTo    = null;
+    document.getElementById('dateFrom').value = '';
+    document.getElementById('dateTo').value   = '';
     document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    render(allEntries);
+    render();
   }
 
-  function getFiltered(entries) {
-    if (!filterDays) return entries;
-    const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - filterDays);
-    return entries.filter(e => new Date(e.date) >= cutoff);
+  function setCustomRange() {
+    customFrom = document.getElementById('dateFrom').value;
+    customTo   = document.getElementById('dateTo').value;
+    if (!customFrom && !customTo) return;
+    filterMode = 'custom';
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    render();
   }
 
-  // ── Fetch data ─────────────────────────────────────────────
+  function getFiltered() {
+    const today = todayStr();
+
+    if (filterMode === 'custom') {
+      return allEntries.filter(e => {
+        if (customFrom && e.date < customFrom) return false;
+        if (customTo   && e.date > customTo)   return false;
+        return true;
+      });
+    }
+
+    if (filterMode === 'today')     return allEntries.filter(e => e.date === today);
+    if (filterMode === 'yesterday') {
+      const yest = new Date(); yest.setDate(yest.getDate()-1);
+      const yStr = yest.toLocaleDateString('en-CA',{timeZone:'Asia/Kuala_Lumpur'});
+      return allEntries.filter(e => e.date === yStr);
+    }
+    if (filterMode === '3days') {
+      const cut = new Date(); cut.setDate(cut.getDate()-3);
+      return allEntries.filter(e => e.date >= cut.toLocaleDateString('en-CA'));
+    }
+    if (filterMode === '5days') {
+      const cut = new Date(); cut.setDate(cut.getDate()-5);
+      return allEntries.filter(e => e.date >= cut.toLocaleDateString('en-CA'));
+    }
+    return allEntries; // 'all'
+  }
+
+  // ── Fetch data ─────────────────────────
   async function loadData() {
     try {
-      const res = await fetch('/api/data');
+      const res  = await fetch('/api/data');
       const json = await res.json();
-      allEntries = (json.entries || []).sort((a, b) => new Date(a.date) - new Date(b.date));
-      render(allEntries);
+      allEntries = (json.entries || []).sort((a,b) => a.date.localeCompare(b.date));
+      skuDefs    = json.skus || [];
+
       document.getElementById('last-updated').textContent =
         `Updated: ${new Date().toLocaleTimeString('en-MY')} · ${allEntries.length} total entries`;
+      render();
     } catch {
       document.getElementById('stats-grid').innerHTML =
-        '<div class="placeholder"><div class="big">❌</div>Could not load data.<br>Make sure the server is running.</div>';
+        '<div class="placeholder"><div class="big">❌</div>Cannot connect. Is the server running?</div>';
     }
   }
 
-  // ── Main render ────────────────────────────────────────────
-  function render(entries) {
-    const filtered = getFiltered(entries);
-    renderStats(filtered, entries);
+  // ── Main render ────────────────────────
+  function render() {
+    const filtered = getFiltered();
+    renderStats(filtered);
+    renderSKUCards(filtered);
     renderCharts(filtered);
     renderTable(filtered);
   }
 
-  // ── Stats cards ────────────────────────────────────────────
-  function renderStats(filtered, all) {
-    if (all.length === 0) {
+  // ── Stats cards ────────────────────────
+  function renderStats(entries) {
+    if (allEntries.length === 0) {
       document.getElementById('stats-grid').innerHTML =
-        '<div class="placeholder" style="grid-column:1/-1"><div class="big">📭</div>' +
-        'No entries yet.<br>Start logging from your Telegram bot!</div>';
+        '<div class="placeholder" style="grid-column:1/-1"><div class="big">📭</div>No entries yet. Start logging from Telegram!</div>';
+      return;
+    }
+    if (entries.length === 0) {
+      document.getElementById('stats-grid').innerHTML =
+        '<div class="placeholder" style="grid-column:1/-1">No data for this period.</div>';
       return;
     }
 
-    const sum = (arr, key) => arr.reduce((a, e) => a + (e[key] || 0), 0);
-
-    const revenue  = sum(filtered, 'revenue');
-    const sales    = sum(filtered, 'sales');
-    const losses   = sum(filtered, 'losses');
-    const wastage  = sum(filtered, 'wastage');
-    const net      = revenue - losses - wastage;
-    const days     = filtered.length || 1;
-    const latest   = filtered[filtered.length - 1];
+    const sum = key => entries.reduce((a,e) => a + (e.totals?.[key] || 0), 0);
+    const revenue     = sum('revenue');
+    const grossProfit = sum('grossProfit');
+    const wastageCost = sum('wastageCost');
+    const totalSold   = sum('totalSold');
+    const days        = entries.length;
+    const margin      = revenue > 0 ? ((grossProfit / revenue)*100).toFixed(1) : 0;
 
     document.getElementById('stats-grid').innerHTML = `
       <div class="stat-card c-green">
-        <div class="icon">💰</div>
-        <div class="label">Revenue</div>
+        <div class="icon">💰</div><div class="label">Revenue</div>
         <div class="value">${fmtRM(revenue)}</div>
-        <div class="sub">Avg ${fmtRM(revenue / days)}/day · ${days} day${days !== 1 ? 's' : ''}</div>
+        <div class="sub">Avg ${fmtRM(revenue/days)}/day · ${days} day${days!==1?'s':''}</div>
       </div>
       <div class="stat-card c-indigo">
-        <div class="icon">🛒</div>
-        <div class="label">Transactions</div>
-        <div class="value">${sales.toLocaleString()}</div>
-        <div class="sub">Avg ${(sales / days).toFixed(1)}/day</div>
+        <div class="icon">📈</div><div class="label">Gross Profit</div>
+        <div class="value">${fmtRM(grossProfit)}</div>
+        <div class="sub">Avg ${fmtRM(grossProfit/days)}/day</div>
       </div>
       <div class="stat-card c-red">
-        <div class="icon">📉</div>
-        <div class="label">Losses</div>
-        <div class="value">${fmtRM(losses)}</div>
-        <div class="sub">${revenue > 0 ? ((losses / revenue) * 100).toFixed(1) : 0}% of revenue</div>
+        <div class="icon">🗑️</div><div class="label">Wastage Cost</div>
+        <div class="value">${fmtRM(wastageCost)}</div>
+        <div class="sub">${revenue>0?((wastageCost/revenue)*100).toFixed(1):0}% of revenue</div>
       </div>
       <div class="stat-card c-amber">
-        <div class="icon">🗑️</div>
-        <div class="label">Wastage</div>
-        <div class="value">${fmtRM(wastage)}</div>
-        <div class="sub">${revenue > 0 ? ((wastage / revenue) * 100).toFixed(1) : 0}% of revenue</div>
+        <div class="icon">🛒</div><div class="label">Total Sold</div>
+        <div class="value">${totalSold.toLocaleString()} pcs</div>
+        <div class="sub">Avg ${(totalSold/days).toFixed(1)} pcs/day</div>
       </div>
-      <div class="stat-card c-grad">
-        <div class="icon">📊</div>
-        <div class="label">Net Profit</div>
-        <div class="value" style="color:${net >= 0 ? 'var(--green)' : 'var(--red)'}">${fmtRM(net)}</div>
-        <div class="sub">${revenue > 0 ? ((net / revenue) * 100).toFixed(1) : 0}% margin</div>
+      <div class="stat-card c-purple">
+        <div class="icon">📊</div><div class="label">Gross Margin</div>
+        <div class="value" style="color:${margin>=30?'var(--green)':margin>=15?'var(--amber)':'var(--red)'}">${margin}%</div>
+        <div class="sub">Net profit: ${fmtRM(grossProfit - wastageCost)}</div>
       </div>
     `;
   }
 
-  // ── Charts ─────────────────────────────────────────────────
-  function renderCharts(entries) {
-    const labels = entries.map(e => fmtShort(e.date));
+  // ── SKU performance cards ─────────────
+  function renderSKUCards(entries) {
+    if (entries.length === 0) {
+      document.getElementById('sku-grid').innerHTML = '<div class="placeholder">No data for this period.</div>';
+      return;
+    }
 
-    // Revenue Trend (line)
-    const rCtx = document.getElementById('revenueChart').getContext('2d');
-    if (revenueChart) revenueChart.destroy();
-    revenueChart = new Chart(rCtx, {
-      type: 'line',
-      data: {
-        labels,
-        datasets: [{
-          label: 'Revenue (RM)',
-          data: entries.map(e => e.revenue),
-          borderColor: '#10b981',
-          backgroundColor: 'rgba(16,185,129,0.1)',
-          fill: true,
-          tension: 0.4,
-          pointBackgroundColor: '#10b981',
-          pointRadius: entries.length > 20 ? 2 : 4,
-        }]
-      },
-      options: { ...CHART_OPTS, plugins: { legend: { display: false } } }
+    // Aggregate by SKU
+    const agg = {};
+    entries.forEach(e => {
+      (e.skuData || []).forEach(s => {
+        if (!agg[s.id]) agg[s.id] = { name:s.name, salePrice:s.salePrice, costPrice:s.costPrice, sold:0, wasted:0, revenue:0, grossProfit:0, wastageCost:0 };
+        agg[s.id].sold        += s.sold;
+        agg[s.id].wasted      += s.wasted;
+        agg[s.id].revenue     += s.revenue;
+        agg[s.id].grossProfit += s.grossProfit;
+        agg[s.id].wastageCost += s.wastageCost;
+      });
     });
 
-    // Breakdown (bar)
-    const bCtx = document.getElementById('breakdownChart').getContext('2d');
-    if (breakdownChart) breakdownChart.destroy();
-    breakdownChart = new Chart(bCtx, {
-      type: 'bar',
-      data: {
+    const html = Object.values(agg).map(s => `
+      <div class="sku-card">
+        <div class="sku-name">${s.name}</div>
+        <div class="sku-price">RM${s.salePrice} sale · RM${s.costPrice} cost</div>
+        <div class="sku-row"><span class="lbl">Sold</span><strong>${s.sold} pcs</strong></div>
+        <div class="sku-row"><span class="lbl">Wasted</span><span style="color:var(--amber)">${s.wasted} pcs</span></div>
+        <div class="sku-row"><span class="lbl">Revenue</span><strong>${fmtRM(s.revenue)}</strong></div>
+        <div class="sku-row"><span class="lbl">Gross Profit</span><span style="color:var(--green)">${fmtRM(s.grossProfit)}</span></div>
+        <div class="sku-row"><span class="lbl">Wastage Cost</span><span style="color:var(--red)">${fmtRM(s.wastageCost)}</span></div>
+      </div>
+    `).join('');
+
+    document.getElementById('sku-grid').innerHTML = html;
+  }
+
+  // ── Charts ─────────────────────────────
+  const CHART_OPTS = {
+    responsive:true,
+    plugins:{ legend:{ labels:{ color:'#94a3b8', font:{ size:11 } } } },
+    scales:{
+      x:{ ticks:{ color:'#94a3b8', font:{size:10} }, grid:{ color:'#1e293b' } },
+      y:{ ticks:{ color:'#94a3b8', font:{size:10} }, grid:{ color:'#334155' } }
+    }
+  };
+
+  // SKU colours
+  const SKU_COLORS = ['#6366f1','#10b981','#f59e0b','#ef4444','#a855f7'];
+
+  function renderCharts(entries) {
+    // ── Chart 1: Daily revenue trend ──
+    const labels = entries.map(e => fmtShort(e.date));
+    const rCtx   = document.getElementById('revenueChart').getContext('2d');
+    if (revenueChart) revenueChart.destroy();
+    revenueChart = new Chart(rCtx, {
+      type:'line',
+      data:{
         labels,
-        datasets: [
-          { label: 'Revenue',  data: entries.map(e => e.revenue),  backgroundColor: 'rgba(16,185,129,0.75)' },
-          { label: 'Losses',   data: entries.map(e => e.losses),   backgroundColor: 'rgba(239,68,68,0.75)' },
-          { label: 'Wastage',  data: entries.map(e => e.wastage),  backgroundColor: 'rgba(245,158,11,0.75)' },
+        datasets:[
+          { label:'Revenue',     data:entries.map(e => e.totals?.revenue     || 0), borderColor:'#10b981', backgroundColor:'rgba(16,185,129,0.1)', fill:true, tension:0.4, pointRadius:3 },
+          { label:'Gross Profit',data:entries.map(e => e.totals?.grossProfit || 0), borderColor:'#6366f1', backgroundColor:'transparent', tension:0.4, pointRadius:3, borderDash:[5,3] },
         ]
       },
-      options: CHART_OPTS
+      options:{ ...CHART_OPTS }
+    });
+
+    // ── Chart 2: SKU comparison (bar) ──
+    // Aggregate each SKU across the filtered period
+    const skuNames    = [];
+    const skuRevenue  = [];
+    const skuGP       = [];
+    const skuWastage  = [];
+
+    const agg = {};
+    entries.forEach(e => {
+      (e.skuData || []).forEach(s => {
+        if (!agg[s.name]) agg[s.name] = { revenue:0, gp:0, wastage:0 };
+        agg[s.name].revenue  += s.revenue;
+        agg[s.name].gp       += s.grossProfit;
+        agg[s.name].wastage  += s.wastageCost;
+      });
+    });
+    Object.entries(agg).forEach(([name, v]) => {
+      skuNames.push(name);
+      skuRevenue.push(+v.revenue.toFixed(2));
+      skuGP.push(+v.gp.toFixed(2));
+      skuWastage.push(+v.wastage.toFixed(2));
+    });
+
+    const sCtx = document.getElementById('skuChart').getContext('2d');
+    if (skuChart) skuChart.destroy();
+    skuChart = new Chart(sCtx, {
+      type:'bar',
+      data:{
+        labels: skuNames,
+        datasets:[
+          { label:'Revenue',      data:skuRevenue, backgroundColor:'rgba(16,185,129,0.75)' },
+          { label:'Gross Profit', data:skuGP,      backgroundColor:'rgba(99,102,241,0.75)' },
+          { label:'Wastage Cost', data:skuWastage, backgroundColor:'rgba(239,68,68,0.75)'  },
+        ]
+      },
+      options:{ ...CHART_OPTS }
     });
   }
 
-  // ── Table ──────────────────────────────────────────────────
+  // ── Daily log table ────────────────────
   function renderTable(entries) {
-    const recent = [...entries].reverse().slice(0, 15);
-
+    const recent = [...entries].reverse().slice(0,20);
     if (recent.length === 0) {
-      document.getElementById('table-container').innerHTML =
-        '<div class="placeholder">No entries in this period.</div>';
+      document.getElementById('table-container').innerHTML = '<div class="placeholder">No entries in this period.</div>';
       return;
     }
 
     const rows = recent.map(e => {
-      const net      = e.revenue - e.losses - e.wastage;
-      const badgeCls = net >= 0 ? 'badge-green' : 'badge-red';
-      const avgTxn   = e.sales > 0 ? (e.revenue / e.sales).toFixed(2) : '—';
+      const t = e.totals || {};
+      const mc = t.grossMarginPct >= 30 ? 'badge-green' : t.grossMarginPct >= 15 ? 'badge-amber' : 'badge-red';
+      const skuCells = (e.skuData || []).map(s =>
+        `<span title="${s.name}: ${s.sold} sold, ${s.wasted} wasted" style="font-size:0.7rem; color:var(--muted); white-space:nowrap">${s.name}: ${s.sold}/${s.wasted}</span>`
+      ).join('<br/>');
       return `
         <tr>
-          <td>${fmtDate(e.date)}</td>
-          <td>${fmtRM(e.revenue)}</td>
-          <td>${e.sales}</td>
-          <td>RM ${avgTxn}</td>
-          <td>${fmtRM(e.losses)}</td>
-          <td>${fmtRM(e.wastage)}</td>
-          <td><span class="badge ${badgeCls}">${fmtRM(net)}</span></td>
-          <td style="color:var(--muted);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.notes || '—'}</td>
+          <td>${fmtFull(e.date)}</td>
+          <td>${skuCells}</td>
+          <td>${fmtRM(t.revenue    || 0)}</td>
+          <td><span style="color:var(--green)">${fmtRM(t.grossProfit || 0)}</span></td>
+          <td><span style="color:var(--red)">${fmtRM(t.wastageCost || 0)}</span></td>
+          <td><span class="badge ${mc}">${t.grossMarginPct || 0}%</span></td>
+          <td style="color:var(--muted);font-size:0.78rem">${e.notes || '—'}</td>
         </tr>`;
     }).join('');
 
@@ -433,12 +434,11 @@
         <thead>
           <tr>
             <th>Date</th>
+            <th>SKU (sold/wasted)</th>
             <th>Revenue</th>
-            <th>Txn</th>
-            <th>Avg/Txn</th>
-            <th>Losses</th>
+            <th>Gross Profit</th>
             <th>Wastage</th>
-            <th>Net</th>
+            <th>Margin</th>
             <th>Notes</th>
           </tr>
         </thead>
@@ -446,7 +446,7 @@
       </table>`;
   }
 
-  // ── Init ───────────────────────────────────────────────────
+  // ── Init ───────────────────────────────
   loadData();
   setInterval(loadData, 30_000);
 </script>
