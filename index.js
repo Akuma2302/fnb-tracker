@@ -1,18 +1,18 @@
 require('dotenv').config();
-const express    = require('express');
+const express     = require('express');
 const TelegramBot = require('node-telegram-bot-api');
 const { MongoClient } = require('mongodb');
-const path       = require('path');
+const path        = require('path');
 
 // ─────────────────────────────────────────
 //  Config
 // ─────────────────────────────────────────
-const BOT_TOKEN = "8901982392:AAG0arsfB59Yzpf2x8T3LZW2Jgf76B6m7lA";
-const PORT      = 3000;
-const MONGO_URI = "mongodb+srv://asyraaf2302_db_user:FJFJIu4hzUfpL2AU@cluster0.9jhroj0.mongodb.net/";
+const BOT_TOKEN = process.env.BOT_TOKEN;
+const PORT      = process.env.PORT || 3000;
+const MONGO_URI = process.env.MONGO_URI;
 
 if (!BOT_TOKEN || !MONGO_URI) {
-  console.error('❌ Missing BOT_TOKEN or MONGO_URI — check your .env file');
+  console.error('❌ Missing BOT_TOKEN or MONGO_URI in .env');
   process.exit(1);
 }
 
@@ -45,7 +45,6 @@ function calcSKUData(sku, sold, wasted) {
   };
 }
 
-
 function calcTotals(skuData) {
   const revenue     = skuData.reduce((a, s) => a + s.revenue,     0);
   const grossProfit = skuData.reduce((a, s) => a + s.grossProfit, 0);
@@ -64,7 +63,7 @@ function calcTotals(skuData) {
 // ─────────────────────────────────────────
 //  MongoDB
 // ─────────────────────────────────────────
-let col; // entries collection
+let col;
 
 async function connectDB() {
   const client = new MongoClient(MONGO_URI);
@@ -82,14 +81,14 @@ async function getEntries() {
 }
 
 // ─────────────────────────────────────────
-//  Helpers
+//  Date Helpers
 // ─────────────────────────────────────────
 function getMalaysiaDate(offsetDays = 0) {
   const d = new Date();
   d.setDate(d.getDate() - offsetDays);
   return d.toLocaleDateString('en-CA', { timeZone: 'Asia/Kuala_Lumpur' });
 }
- 
+
 function formatRM(val) { return `RM ${Number(val).toFixed(2)}`; }
 
 // ─────────────────────────────────────────
@@ -99,7 +98,6 @@ const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Dashboard data API
 app.get('/api/data', async (req, res) => {
   try {
     const entries = await getEntries();
@@ -109,21 +107,19 @@ app.get('/api/data', async (req, res) => {
   }
 });
 
-// Health check — used by UptimeRobot to keep server awake
-app.get('/health', (req, res) => res.json({ status: 'ok', time: new Date() }));
+app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
 // ─────────────────────────────────────────
 //  Telegram Bot
 // ─────────────────────────────────────────
 const bot      = new TelegramBot(BOT_TOKEN, { polling: true });
-const sessions = {}; // in-memory session store
-
+const sessions = {};
 
 // ── Helper: send the date picker keyboard ─
 function sendDatePicker(chatId) {
   const today = getMalaysiaDate(0);
   const yest  = getMalaysiaDate(1);
- 
+
   bot.sendMessage(chatId, `📅 *Step 1 — Choose Date*\n\nTap a quick option or type your own:`, {
     parse_mode: 'Markdown',
     reply_markup: {
@@ -158,10 +154,10 @@ function promptSKU(chatId, idx) {
 bot.onText(/\/start/, (msg) => {
   bot.sendMessage(msg.chat.id,
     `🍽️ *FnB Daily Tracker*\n\n` +
-    `Hello! I help you track your daily FnB performance.\n\n` +
+    `Track your daily sales by SKU!\n\n` +
     `📋 *Commands:*\n` +
-    `/log    — Log today's figures\n` +
-    `/view   — View last 7 entries\n` +
+    `/log    — Log today's sales\n` +
+    `/view   — View last 5 entries\n` +
     `/cancel — Cancel current entry\n` +
     `/help   — Show this menu`,
     { parse_mode: 'Markdown' }
@@ -170,9 +166,9 @@ bot.onText(/\/start/, (msg) => {
 
 bot.onText(/\/help/, (msg) => {
   bot.sendMessage(msg.chat.id,
-    `📋 *Available Commands:*\n\n` +
-    `/log    — Log daily sales data\n` +
-    `/view   — View last 7 entries\n` +
+    `📋 *Commands:*\n\n` +
+    `/log    — Log daily sales by SKU\n` +
+    `/view   — View last 5 entries\n` +
     `/cancel — Cancel current entry`,
     { parse_mode: 'Markdown' }
   );
@@ -190,11 +186,11 @@ bot.onText(/\/view/, async (msg) => {
   try {
     const all    = await getEntries();
     const recent = all.slice(-5).reverse();
- 
+
     if (recent.length === 0) {
       return bot.sendMessage(msg.chat.id, `📭 No entries yet. Use /log to add data!`);
     }
- 
+
     let text = `📊 *Last ${recent.length} Entries:*\n\n`;
     recent.forEach(e => {
       const t = e.totals;
@@ -209,7 +205,7 @@ bot.onText(/\/view/, async (msg) => {
       if (e.notes) text += `📝 ${e.notes}\n`;
       text += `\n`;
     });
- 
+
     bot.sendMessage(msg.chat.id, text, { parse_mode: 'Markdown' });
   } catch (err) {
     bot.sendMessage(msg.chat.id, `❌ Error: ${err.message}`);
@@ -226,17 +222,17 @@ bot.onText(/\/cancel/, (msg) => {
 bot.on('callback_query', async (query) => {
   const chatId = query.message.chat.id;
   bot.answerCallbackQuery(query.id);
- 
+
   if (!sessions[chatId]) return;
   const session = sessions[chatId];
- 
+
   if (query.data.startsWith('date:')) {
     if (query.data === 'date:custom') {
       session.step = 'date_custom';
       bot.sendMessage(chatId, `✏️ Type the date _(YYYY-MM-DD)_:\n_e.g. 2025-06-18_`, { parse_mode: 'Markdown' });
       return;
     }
- 
+
     // A quick date was selected
     session.data.date     = query.data.replace('date:', '');
     session.step          = 'sku';
@@ -250,14 +246,14 @@ bot.on('callback_query', async (query) => {
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
   const text   = (msg.text || '').trim();
- 
+
   if (!text || text.startsWith('/')) return;
   if (!sessions[chatId]) return;
- 
+
   const session = sessions[chatId];
- 
+
   const steps = {
- 
+
     // Waiting for typed custom date
     date_custom() {
       const valid = /^\d{4}-\d{2}-\d{2}$/.test(text);
@@ -269,7 +265,7 @@ bot.on('message', async (msg) => {
       bot.sendMessage(chatId, `✅ Date set: *${text}*`, { parse_mode: 'Markdown' });
       promptSKU(chatId, 0);
     },
- 
+
     // Entering pcs per SKU (sold,wasted)
     sku() {
       const parts = text.split(',').map(s => parseInt(s.trim()));
@@ -278,12 +274,12 @@ bot.on('message', async (msg) => {
           `❌ Enter two numbers: *sold,wasted*\n_e.g. 25,3_\n_Type 0,0 if none_`,
           { parse_mode: 'Markdown' }
         );
- 
+
       const [sold, wasted] = parts;
       const sku = SKUS[session.data.skuIndex];
       session.data.skuData.push(calcSKUData(sku, sold, wasted));
       session.data.skuIndex++;
- 
+
       if (session.data.skuIndex < SKUS.length) {
         promptSKU(chatId, session.data.skuIndex);
       } else {
@@ -294,17 +290,17 @@ bot.on('message', async (msg) => {
         );
       }
     },
- 
+
     // Final step: save everything
     async notes() {
       session.data.notes     = text.toLowerCase() === 'skip' ? '' : text;
       session.data.timestamp = new Date().toISOString();
       session.data.totals    = calcTotals(session.data.skuData);
- 
+
       try {
         await saveEntry(session.data);
         const t = session.data.totals;
- 
+
         let msg  = `✅ *Saved to database!*\n\n`;
         msg += `📅 Date: *${session.data.date}*\n\n`;
         msg += `*SKU Breakdown:*\n`;
@@ -320,7 +316,7 @@ bot.on('message', async (msg) => {
         msg += `📉 Gross Margin:   ${t.grossMarginPct}%\n`;
         if (session.data.notes) msg += `📝 Notes: ${session.data.notes}\n`;
         msg += `\n_Dashboard updated!_`;
- 
+
         bot.sendMessage(chatId, msg, { parse_mode: 'Markdown' });
       } catch (err) {
         bot.sendMessage(chatId, `❌ Failed to save: ${err.message}`);
@@ -328,24 +324,19 @@ bot.on('message', async (msg) => {
       delete sessions[chatId];
     }
   };
- 
+
   if (steps[session.step]) await steps[session.step]();
 });
 
 bot.on('polling_error', (err) => console.error('Bot error:', err.message));
 
 // ─────────────────────────────────────────
-//  Start Everything
+//  Start
 // ─────────────────────────────────────────
 async function start() {
   await connectDB();
-  app.listen(PORT, () => {
-    console.log(`✅ Dashboard running at http://localhost:${PORT}`);
-  });
-  console.log(`🤖 Telegram bot is running...`);
+  app.listen(PORT, () => console.log(`✅ Dashboard → http://localhost:${PORT}`));
+  console.log(`🤖 Telegram bot running...`);
 }
 
-start().catch(err => {
-  console.error('❌ Startup failed:', err.message);
-  process.exit(1);
-});
+start().catch(err => { console.error('❌ Startup failed:', err.message); process.exit(1); });
