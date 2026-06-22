@@ -339,4 +339,5 @@ async function start() {
   console.log(`🤖 Telegram bot running...`);
 }
 
+
 start().catch(err => { console.error('❌ Startup failed:', err.message); process.exit(1); });
