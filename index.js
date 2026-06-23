@@ -3,6 +3,7 @@ const express     = require('express');
 const TelegramBot = require('node-telegram-bot-api');
 const { MongoClient } = require('mongodb');
 const path        = require('path');
+const fetch       = require('node-fetch'); // npm install node-fetch@2
 
 // ─────────────────────────────────────────
 //  Config
