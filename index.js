@@ -7,9 +7,9 @@ const path           = require('path');
 // ─────────────────────────────────────────
 //  CONFIG — edit these values
 // ─────────────────────────────────────────
-const BOT_TOKEN = process.env.BOT_TOKEN || "8901982392:AAG0arsfB59Yzpf2x8T3LZW2Jgf76B6m7lA";
-const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://asyraaf2302_db_user:FJFJIu4hzUfpL2AU@cluster0.9jhroj0.mongodb.net/";
-const PORT      = process.env.PORT || 3000;
+const BOT_TOKEN = "8901982392:AAGhg7FxW4-qvl6zNejebEzcMkVMveNEjf0";
+const MONGO_URI = "mongodb+srv://asyraaf2302_db_user:FJFJIu4hzUfpL2AU@cluster0.9jhroj0.mongodb.net/";
+const PORT      = 3000;
 
 // ─────────────────────────────────────────
 //  SKU DEFINITIONS — edit to match your menu
