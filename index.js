@@ -12,7 +12,7 @@ const PORT      = 3000;
 const MONGO_URI = "mongodb+srv://asyraaf2302_db_user:FJFJIu4hzUfpL2AU@cluster0.9jhroj0.mongodb.net/";
 
 if (!BOT_TOKEN || !MONGO_URI) {
-  console.error('❌ Missing BOT_TOKEN or MONGO_URI — check your .env file');
+  console.error('Missing BOT_TOKEN or MONGO_URI');
   process.exit(1);
 }
 
@@ -73,7 +73,7 @@ async function connectDB() {
   await client.connect();
   col = client.db('fnb_tracker').collection('entries');
   await col.createIndex({ date: 1, salesperson: 1 }, { unique: true });
-  console.log('✅ Connected to MongoDB');
+  console.log('Connected to MongoDB');
 }
 
 async function saveEntry(data) {
@@ -99,6 +99,11 @@ function getMalaysiaDate(offsetDays = 0) {
 
 function formatRM(val) { return `RM ${Number(val).toFixed(2)}`; }
 
+// Safe send — no Markdown, never fails on special characters
+function send(chatId, text) {
+  return bot.sendMessage(chatId, text);
+}
+
 // ─────────────────────────────────────────
 //  Express
 // ─────────────────────────────────────────
@@ -120,69 +125,66 @@ app.get('/health', (req, res) => res.json({ status: 'ok' }));
 // ─────────────────────────────────────────
 //  Telegram Bot
 // ─────────────────────────────────────────
-const bot     = new TelegramBot(BOT_TOKEN, { polling: true });
+const bot      = new TelegramBot(BOT_TOKEN, { polling: true });
 const sessions = {};
-const spNames  = {}; // persists name across sessions: spNames[chatId] = 'Akmal'
+const spNames  = {}; // spNames[chatId] = 'Akmal' — persists across sessions
 
 // ── Helper: send date picker ──────────────
 function sendDatePicker(chatId) {
   const today = getMalaysiaDate(0);
   const yest  = getMalaysiaDate(1);
-  bot.sendMessage(chatId, `📅 *Step 1 — Choose Date*\n\nTap a quick option or type your own:`, {
-    parse_mode: 'Markdown',
-    reply_markup: {
-      inline_keyboard: [
-        [
-          { text: `📅 Today (${today})`,    callback_data: `date:${today}` },
-          { text: `⬅️ Yesterday (${yest})`, callback_data: `date:${yest}`  },
+  bot.sendMessage(chatId,
+    'Step 1 — Choose Date\n\nTap a quick option or type your own:',
+    {
+      reply_markup: {
+        inline_keyboard: [
+          [
+            { text: 'Today (' + today + ')',     callback_data: 'date:' + today },
+            { text: 'Yesterday (' + yest + ')',  callback_data: 'date:' + yest  },
+          ],
+          [
+            { text: 'Type a different date', callback_data: 'date:custom' },
+          ],
         ],
-        [
-          { text: '✏️ Type a different date', callback_data: 'date:custom' },
-        ],
-      ],
-    },
-  });
+      },
+    }
+  );
 }
 
 // ── Helper: prompt for a SKU ──────────────
 function promptSKU(chatId, idx) {
   const sku  = SKUS[idx];
   const step = idx + 2;
-  bot.sendMessage(chatId,
-    `🛒 *Step ${step} of ${SKUS.length + 2} — ${sku.name}*\n\n` +
-    `💰 Sale: RM${sku.salePrice} | Cost: RM${sku.costPrice}\n\n` +
-    `Enter *sold,wasted* pcs separated by comma:\n` +
-    `_e.g. 25,3 = 25 sold, 3 wasted_\n` +
-    `_Type 0,0 if not sold today_`,
-    { parse_mode: 'Markdown' }
+  send(chatId,
+    'Step ' + step + ' of ' + (SKUS.length + 2) + ' — ' + sku.name + '\n\n' +
+    'Sale: RM' + sku.salePrice + ' | Cost: RM' + sku.costPrice + '\n\n' +
+    'Enter sold,wasted — e.g. 25,3\n' +
+    '(type 0,0 if not sold today)'
   );
 }
 
 // ── /start ────────────────────────────────
 bot.onText(/\/start/, (msg) => {
-  const chatId = msg.chat.id;
-  const tgName = msg.from?.first_name || 'there';
-  bot.sendMessage(chatId,
-    `🍽️ *FnB Daily Tracker*\n\nHi ${tgName}!\n\n` +
-    `📋 *Commands:*\n` +
-    `/log      — Log today's sales\n` +
-    `/view     — View your last 5 entries\n` +
-    `/setname  — Change your name\n` +
-    `/cancel   — Cancel current entry\n` +
-    `/help     — Show this menu`,
-    { parse_mode: 'Markdown' }
+  const tgName = (msg.from && msg.from.first_name) || 'there';
+  send(msg.chat.id,
+    'FnB Daily Tracker\n\nHi ' + tgName + '!\n\n' +
+    'Commands:\n' +
+    '/log      — Log today\'s sales\n' +
+    '/view     — View your last 5 entries\n' +
+    '/setname  — Change your name\n' +
+    '/cancel   — Cancel current entry\n' +
+    '/help     — Show this menu'
   );
 });
 
 // ── /help ─────────────────────────────────
 bot.onText(/\/help/, (msg) => {
-  bot.sendMessage(msg.chat.id,
-    `📋 *Commands:*\n\n` +
-    `/log      — Log daily sales by SKU\n` +
-    `/view     — View last 5 entries\n` +
-    `/setname  — Update your name\n` +
-    `/cancel   — Cancel current entry`,
-    { parse_mode: 'Markdown' }
+  send(msg.chat.id,
+    'Commands:\n\n' +
+    '/log      — Log daily sales by SKU\n' +
+    '/view     — View last 5 entries\n' +
+    '/setname  — Update your name\n' +
+    '/cancel   — Cancel current entry'
   );
 });
 
@@ -190,19 +192,17 @@ bot.onText(/\/help/, (msg) => {
 bot.onText(/\/setname/, (msg) => {
   const chatId = msg.chat.id;
   sessions[chatId] = { step: 'setname', data: {} };
-  bot.sendMessage(chatId, `👤 What's your name?`);
+  send(chatId, 'What is your name?');
 });
 
 // ── /log ──────────────────────────────────
 bot.onText(/\/log/, (msg) => {
   const chatId = msg.chat.id;
   if (!spNames[chatId]) {
-    // Ask for name first, then auto-start log
     sessions[chatId] = { step: 'setname', data: { afterName: 'log' } };
-    bot.sendMessage(chatId, `👤 First, what's your *name*? Type it below:`, { parse_mode: 'Markdown' });
+    send(chatId, 'First, what is your name? Type it below:');
     return;
   }
-  // Name already known — go straight to date picker
   sessions[chatId] = { step: 'date', data: { salesperson: spNames[chatId], skuData: [], skuIndex: 0 } };
   sendDatePicker(chatId);
 });
@@ -213,30 +213,30 @@ bot.onText(/\/view/, async (msg) => {
   const name   = spNames[chatId];
   try {
     const all    = await getEntries();
-    const mine   = name ? all.filter(e => e.salesperson === name) : all;
+    const mine   = name ? all.filter(function(e) { return e.salesperson === name; }) : all;
     const recent = mine.slice(-5).reverse();
     if (!recent.length) {
-      return bot.sendMessage(chatId, `📭 No entries yet. Use /log to add data!`);
+      return send(chatId, 'No entries yet. Use /log to add data!');
     }
-    let text = `📊 *Last ${recent.length} Entries${name ? ` — ${name}` : ''}:*\n\n`;
-    recent.forEach(e => {
+    let text = 'Last ' + recent.length + ' Entries' + (name ? ' — ' + name : '') + ':\n\n';
+    recent.forEach(function(e) {
       const t = e.totals;
-      text += `📅 *${e.date}*\n`;
-      (e.skuData || []).forEach(s => {
-        text += `  • ${s.name}: ${s.sold} sold, ${s.wasted} wasted → ${formatRM(s.revenue)}\n`;
+      text += 'Date: ' + e.date + '\n';
+      (e.skuData || []).forEach(function(s) {
+        text += '  ' + s.name + ': ' + s.sold + ' sold, ' + s.wasted + ' wasted — ' + formatRM(s.revenue) + '\n';
       });
-      text += `💰 Revenue: ${formatRM(t.revenue)} | GP: ${formatRM(t.grossProfit)} | Waste: ${formatRM(t.wastageCost)} | ${t.grossMarginPct}%\n\n`;
+      text += 'Revenue: ' + formatRM(t.revenue) + ' | GP: ' + formatRM(t.grossProfit) + ' | Waste: ' + formatRM(t.wastageCost) + ' | ' + t.grossMarginPct + '%\n\n';
     });
-    bot.sendMessage(chatId, text, { parse_mode: 'Markdown' });
+    send(chatId, text);
   } catch (err) {
-    bot.sendMessage(chatId, `❌ Error: ${err.message}`);
+    send(chatId, 'Error: ' + err.message);
   }
 });
 
 // ── /cancel ───────────────────────────────
 bot.onText(/\/cancel/, (msg) => {
   delete sessions[msg.chat.id];
-  bot.sendMessage(msg.chat.id, `❌ Entry cancelled.`);
+  send(msg.chat.id, 'Entry cancelled.');
 });
 
 // ── Inline keyboard handler (date buttons) ─
@@ -244,20 +244,24 @@ bot.on('callback_query', async (query) => {
   const chatId = query.message.chat.id;
   bot.answerCallbackQuery(query.id);
 
-  if (!sessions[chatId]) return;
+  if (!sessions[chatId]) {
+    send(chatId, 'Session expired. Use /log to start again.');
+    return;
+  }
   const session = sessions[chatId];
 
   if (query.data.startsWith('date:')) {
     if (query.data === 'date:custom') {
       session.step = 'date_custom';
-      bot.sendMessage(chatId, `✏️ Type the date _(YYYY-MM-DD)_:\n_e.g. 2025-06-18_`, { parse_mode: 'Markdown' });
+      send(chatId, 'Type the date in YYYY-MM-DD format:\ne.g. 2025-06-18');
       return;
     }
-    // A quick date was selected
-    session.data.date     = query.data.replace('date:', '');
+    // Date button tapped
+    const chosenDate      = query.data.replace('date:', '');
+    session.data.date     = chosenDate;
     session.step          = 'sku';
     session.data.skuIndex = 0;
-    bot.sendMessage(chatId, `✅ Date set: *${session.data.date}*`, { parse_mode: 'Markdown' });
+    send(chatId, 'Date set: ' + chosenDate + '\n\nNow enter each item:');
     promptSKU(chatId, 0);
   }
 });
@@ -275,12 +279,11 @@ bot.on('message', async (msg) => {
   const steps = {
 
     // Collect salesperson name
-    setname() {
+    setname: function() {
       const name = text;
       spNames[chatId] = name;
-      bot.sendMessage(chatId, `✅ Name saved as ${name}!`);
+      send(chatId, 'Name saved as ' + name + '!');
       if (session.data.afterName === 'log') {
-        // Auto-proceed to log flow
         sessions[chatId] = { step: 'date', data: { salesperson: name, skuData: [], skuIndex: 0 } };
         sendDatePicker(chatId);
       } else {
@@ -289,27 +292,28 @@ bot.on('message', async (msg) => {
     },
 
     // Waiting for typed custom date
-    date_custom() {
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(text))
-        return bot.sendMessage(chatId, `❌ Wrong format. Enter as YYYY-MM-DD\n_e.g. 2025-06-18_`, { parse_mode: 'Markdown' });
+    date_custom: function() {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) {
+        send(chatId, 'Wrong format. Enter as YYYY-MM-DD\ne.g. 2025-06-18');
+        return;
+      }
       session.data.date     = text;
       session.step          = 'sku';
       session.data.skuIndex = 0;
-      bot.sendMessage(chatId, `✅ Date set: *${text}*`, { parse_mode: 'Markdown' });
+      send(chatId, 'Date set: ' + text);
       promptSKU(chatId, 0);
     },
 
     // Entering pcs per SKU (sold,wasted)
-    sku() {
-      const parts = text.split(',').map(s => parseInt(s.trim()));
-      if (parts.length !== 2 || parts.some(isNaN) || parts.some(v => v < 0))
-        return bot.sendMessage(chatId,
-          `❌ Enter two numbers: *sold,wasted*\n_e.g. 25,3_\n_Type 0,0 if none_`,
-          { parse_mode: 'Markdown' }
-        );
-
-      const [sold, wasted] = parts;
-      const sku = SKUS[session.data.skuIndex];
+    sku: function() {
+      const parts = text.split(',').map(function(s) { return parseInt(s.trim(), 10); });
+      if (parts.length !== 2 || parts.some(isNaN) || parts.some(function(v) { return v < 0; })) {
+        send(chatId, 'Enter two numbers: sold,wasted\ne.g. 25,3\nType 0,0 if none');
+        return;
+      }
+      const sold   = parts[0];
+      const wasted = parts[1];
+      const sku    = SKUS[session.data.skuIndex];
       session.data.skuData.push(calcSKUData(sku, sold, wasted));
       session.data.skuIndex++;
 
@@ -317,15 +321,12 @@ bot.on('message', async (msg) => {
         promptSKU(chatId, session.data.skuIndex);
       } else {
         session.step = 'notes';
-        bot.sendMessage(chatId,
-          `📝 *Last step — Notes*\n\nAny notes for today?\n_(type *skip* to leave empty)_`,
-          { parse_mode: 'Markdown' }
-        );
+        send(chatId, 'Last step — Notes\n\nAny notes for today?\n(type skip to leave empty)');
       }
     },
 
     // Final step: save everything
-    async notes() {
+    notes: async function() {
       session.data.notes     = text.toLowerCase() === 'skip' ? '' : text;
       session.data.timestamp = new Date().toISOString();
       session.data.totals    = calcTotals(session.data.skuData);
@@ -334,25 +335,25 @@ bot.on('message', async (msg) => {
         await saveEntry(session.data);
         const t = session.data.totals;
 
-        let reply  = `✅ *Saved!*\n\n`;
-        reply += `📅 Date: *${session.data.date}* · 👤 *${session.data.salesperson}*\n\n`;
-        reply += `*SKU Breakdown:*\n`;
-        session.data.skuData.forEach(s => {
-          reply += `• ${s.name}: ${s.sold} sold, ${s.wasted} wasted\n`;
-          reply += `  Revenue: ${formatRM(s.revenue)} | GP: ${formatRM(s.grossProfit)} | Wastage: ${formatRM(s.wastageCost)}\n`;
+        let reply = 'Saved!\n\n';
+        reply += 'Date: ' + session.data.date + '  |  Salesperson: ' + session.data.salesperson + '\n\n';
+        reply += 'SKU Breakdown:\n';
+        session.data.skuData.forEach(function(s) {
+          reply += s.name + ': ' + s.sold + ' sold, ' + s.wasted + ' wasted\n';
+          reply += '  Revenue: ' + formatRM(s.revenue) + ' | GP: ' + formatRM(s.grossProfit) + ' | Wastage: ' + formatRM(s.wastageCost) + '\n';
         });
-        reply += `\n📊 *Summary:*\n`;
-        reply += `💰 Revenue:      ${formatRM(t.revenue)}\n`;
-        reply += `📈 Gross Profit: ${formatRM(t.grossProfit)}\n`;
-        reply += `🗑️ Wastage:      ${formatRM(t.wastageCost)}\n`;
-        reply += `📊 Net:          ${formatRM(t.netProfit)}\n`;
-        reply += `📉 Margin:       ${t.grossMarginPct}%\n`;
-        if (session.data.notes) reply += `📝 Notes: ${session.data.notes}\n`;
-        reply += `\n_Dashboard updated!_`;
+        reply += '\nSummary:\n';
+        reply += 'Revenue:      ' + formatRM(t.revenue) + '\n';
+        reply += 'Gross Profit: ' + formatRM(t.grossProfit) + '\n';
+        reply += 'Wastage:      ' + formatRM(t.wastageCost) + '\n';
+        reply += 'Net:          ' + formatRM(t.netProfit) + '\n';
+        reply += 'Margin:       ' + t.grossMarginPct + '%\n';
+        if (session.data.notes) reply += 'Notes: ' + session.data.notes + '\n';
+        reply += '\nDashboard updated!';
 
-        bot.sendMessage(chatId, reply, { parse_mode: 'Markdown' });
+        send(chatId, reply);
       } catch (err) {
-        bot.sendMessage(chatId, `❌ Failed to save: ${err.message}`);
+        send(chatId, 'Failed to save: ' + err.message);
       }
       delete sessions[chatId];
     }
@@ -361,15 +362,15 @@ bot.on('message', async (msg) => {
   if (steps[session.step]) await steps[session.step]();
 });
 
-bot.on('polling_error', (err) => console.error('Bot error:', err.message));
+bot.on('polling_error', function(err) { console.error('Bot error:', err.message); });
 
 // ─────────────────────────────────────────
 //  Start
 // ─────────────────────────────────────────
 async function start() {
   await connectDB();
-  app.listen(PORT, () => console.log(`✅ Dashboard → http://localhost:${PORT}`));
-  console.log(`🤖 Telegram bot running...`);
+  app.listen(PORT, function() { console.log('Dashboard running on port ' + PORT); });
+  console.log('Telegram bot running...');
 }
 
-start().catch(err => { console.error('❌ Startup failed:', err.message); process.exit(1); });
+start().catch(function(err) { console.error('Startup failed:', err.message); process.exit(1); });
