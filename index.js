@@ -116,8 +116,11 @@ async function classifyIntent(text) {
   if (!HERMES_API_KEY) return { intent: 'UNKNOWN' };
   try {
     const { default: fetch } = await import('node-fetch');
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3000); // 3s timeout
     const res  = await fetch(HERMES_API_URL, {
       method: 'POST',
+      signal: controller.signal,
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${HERMES_API_KEY}` },
       body: JSON.stringify({
         model: HERMES_MODEL,
@@ -129,6 +132,7 @@ async function classifyIntent(text) {
         max_tokens: 10,
       }),
     });
+    clearTimeout(timeout);
     const data   = await res.json();
     const intent = (data.choices?.[0]?.message?.content?.trim() || 'UNKNOWN').toUpperCase();
     return { intent: ['LOG','VIEW','HELP','CANCEL'].includes(intent) ? intent : 'UNKNOWN' };
@@ -349,7 +353,7 @@ bot.on('message', async (msg) => {
       const name = text;
       spNames[chatId] = name;
       delete sessions[chatId];
-      bot.sendMessage(chatId, `✅ Name saved as *${name}*!`, { parse_mode: 'Markdown' });
+      await bot.sendMessage(chatId, `✅ Name saved as ${name}!`);
       // If they came via /log, auto-start the log flow
       if (data.afterName === 'log') {
         startLogFlow(chatId, name);
@@ -397,7 +401,7 @@ bot.on('message', async (msg) => {
       data.skuIndex++;
  
       if (data.skuIndex < SKUS.length) {
-        promptSKU(chatId, data.skuIndex);
+        await promptSKU(chatId, data.skuIndex);
       } else {
         session.step = 'notes';
         bot.sendMessage(chatId,
@@ -454,7 +458,7 @@ bot.on('message', async (msg) => {
   if (resolvedIntent === 'LOG') {
     if (!spNames[chatId]) {
       sessions[chatId] = { step: 'setname', data: { afterName: 'log' } };
-      bot.sendMessage(chatId, `👤 First, what's your *name*?`, { parse_mode: 'Markdown' });
+      bot.sendMessage(chatId, `👤 First, what's your name? Type it below:`);
     } else {
       startLogFlow(chatId, spNames[chatId]);
     }
