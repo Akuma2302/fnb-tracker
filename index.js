@@ -12,7 +12,7 @@ const PORT      = 3000;
 const MONGO_URI = "mongodb+srv://asyraaf2302_db_user:FJFJIu4hzUfpL2AU@cluster0.9jhroj0.mongodb.net/";
 
 if (!BOT_TOKEN || !MONGO_URI) {
-  console.error('Missing BOT_TOKEN or MONGO_URI');
+  console.error('❌ Missing BOT_TOKEN or MONGO_URI — check your .env file');
   process.exit(1);
 }
 
@@ -73,7 +73,7 @@ async function connectDB() {
   await client.connect();
   col = client.db('fnb_tracker').collection('entries');
   await col.createIndex({ date: 1, salesperson: 1 }, { unique: true });
-  console.log('Connected to MongoDB');
+  console.log('✅ Connected to MongoDB');
 }
 
 async function saveEntry(data) {
@@ -99,11 +99,6 @@ function getMalaysiaDate(offsetDays = 0) {
 
 function formatRM(val) { return `RM ${Number(val).toFixed(2)}`; }
 
-// Safe send — no Markdown, never fails on special characters
-function send(chatId, text) {
-  return bot.sendMessage(chatId, text);
-}
-
 // ─────────────────────────────────────────
 //  Express
 // ─────────────────────────────────────────
@@ -127,23 +122,23 @@ app.get('/health', (req, res) => res.json({ status: 'ok' }));
 // ─────────────────────────────────────────
 const bot      = new TelegramBot(BOT_TOKEN, { polling: true });
 const sessions = {};
-const spNames  = {}; // spNames[chatId] = 'Akmal' — persists across sessions
+const spNames  = {}; // persists name across sessions: spNames[chatId] = 'Akmal'
 
 // ── Helper: send date picker ──────────────
 function sendDatePicker(chatId) {
   const today = getMalaysiaDate(0);
   const yest  = getMalaysiaDate(1);
   bot.sendMessage(chatId,
-    'Step 1 — Choose Date\n\nTap a quick option or type your own:',
+    `📅 Step 1 — Choose Date\n\nTap a quick option or type your own:`,
     {
       reply_markup: {
         inline_keyboard: [
           [
-            { text: 'Today (' + today + ')',     callback_data: 'date:' + today },
-            { text: 'Yesterday (' + yest + ')',  callback_data: 'date:' + yest  },
+            { text: `📅 Today (${today})`,    callback_data: `date:${today}` },
+            { text: `⬅️ Yesterday (${yest})`, callback_data: `date:${yest}`  },
           ],
           [
-            { text: 'Type a different date', callback_data: 'date:custom' },
+            { text: '✏️ Type a different date', callback_data: 'date:custom' },
           ],
         ],
       },
@@ -155,36 +150,37 @@ function sendDatePicker(chatId) {
 function promptSKU(chatId, idx) {
   const sku  = SKUS[idx];
   const step = idx + 2;
-  send(chatId,
-    'Step ' + step + ' of ' + (SKUS.length + 2) + ' — ' + sku.name + '\n\n' +
-    'Sale: RM' + sku.salePrice + ' | Cost: RM' + sku.costPrice + '\n\n' +
-    'Enter sold,wasted — e.g. 25,3\n' +
-    '(type 0,0 if not sold today)'
+  bot.sendMessage(chatId,
+    `🛒 Step ${step} of ${SKUS.length + 2} — ${sku.name}\n\n` +
+    `Sale: RM${sku.salePrice} | Cost: RM${sku.costPrice}\n\n` +
+    `Enter sold,wasted — e.g. 25,3\n` +
+    `Type 0,0 if not sold today`
   );
 }
 
 // ── /start ────────────────────────────────
 bot.onText(/\/start/, (msg) => {
-  const tgName = (msg.from && msg.from.first_name) || 'there';
-  send(msg.chat.id,
-    'FnB Daily Tracker\n\nHi ' + tgName + '!\n\n' +
-    'Commands:\n' +
-    '/log      — Log today\'s sales\n' +
-    '/view     — View your last 5 entries\n' +
-    '/setname  — Change your name\n' +
-    '/cancel   — Cancel current entry\n' +
-    '/help     — Show this menu'
+  const chatId = msg.chat.id;
+  const tgName = msg.from?.first_name || 'there';
+  bot.sendMessage(chatId,
+    `🍽️ FnB Daily Tracker\n\nHi ${tgName}!\n\n` +
+    `Commands:\n` +
+    `/log      — Log today's sales\n` +
+    `/view     — View your last 5 entries\n` +
+    `/setname  — Change your name\n` +
+    `/cancel   — Cancel current entry\n` +
+    `/help     — Show this menu`
   );
 });
 
 // ── /help ─────────────────────────────────
 bot.onText(/\/help/, (msg) => {
-  send(msg.chat.id,
-    'Commands:\n\n' +
-    '/log      — Log daily sales by SKU\n' +
-    '/view     — View last 5 entries\n' +
-    '/setname  — Update your name\n' +
-    '/cancel   — Cancel current entry'
+  bot.sendMessage(msg.chat.id,
+    `Commands:\n\n` +
+    `/log      — Log daily sales by SKU\n` +
+    `/view     — View last 5 entries\n` +
+    `/setname  — Update your name\n` +
+    `/cancel   — Cancel current entry`
   );
 });
 
@@ -192,7 +188,7 @@ bot.onText(/\/help/, (msg) => {
 bot.onText(/\/setname/, (msg) => {
   const chatId = msg.chat.id;
   sessions[chatId] = { step: 'setname', data: {} };
-  send(chatId, 'What is your name?');
+  bot.sendMessage(chatId, `👤 What's your name?`);
 });
 
 // ── /log ──────────────────────────────────
@@ -200,7 +196,7 @@ bot.onText(/\/log/, (msg) => {
   const chatId = msg.chat.id;
   if (!spNames[chatId]) {
     sessions[chatId] = { step: 'setname', data: { afterName: 'log' } };
-    send(chatId, 'First, what is your name? Type it below:');
+    bot.sendMessage(chatId, `👤 First, what's your name? Type it below:`);
     return;
   }
   sessions[chatId] = { step: 'date', data: { salesperson: spNames[chatId], skuData: [], skuIndex: 0 } };
@@ -213,57 +209,62 @@ bot.onText(/\/view/, async (msg) => {
   const name   = spNames[chatId];
   try {
     const all    = await getEntries();
-    const mine   = name ? all.filter(function(e) { return e.salesperson === name; }) : all;
+    const mine   = name ? all.filter(e => e.salesperson === name) : all;
     const recent = mine.slice(-5).reverse();
     if (!recent.length) {
-      return send(chatId, 'No entries yet. Use /log to add data!');
+      return bot.sendMessage(chatId, `📭 No entries yet. Use /log to add data!`);
     }
-    let text = 'Last ' + recent.length + ' Entries' + (name ? ' — ' + name : '') + ':\n\n';
-    recent.forEach(function(e) {
+    let text = `📊 Last ${recent.length} Entries${name ? ` — ${name}` : ''}:\n\n`;
+    recent.forEach(e => {
       const t = e.totals;
-      text += 'Date: ' + e.date + '\n';
-      (e.skuData || []).forEach(function(s) {
-        text += '  ' + s.name + ': ' + s.sold + ' sold, ' + s.wasted + ' wasted — ' + formatRM(s.revenue) + '\n';
+      text += `📅 ${e.date}\n`;
+      (e.skuData || []).forEach(s => {
+        text += `  • ${s.name}: ${s.sold} sold, ${s.wasted} wasted — ${formatRM(s.revenue)}\n`;
       });
-      text += 'Revenue: ' + formatRM(t.revenue) + ' | GP: ' + formatRM(t.grossProfit) + ' | Waste: ' + formatRM(t.wastageCost) + ' | ' + t.grossMarginPct + '%\n\n';
+      text += `Revenue: ${formatRM(t.revenue)} | GP: ${formatRM(t.grossProfit)} | Waste: ${formatRM(t.wastageCost)} | ${t.grossMarginPct}%\n\n`;
     });
-    send(chatId, text);
+    bot.sendMessage(chatId, text);
   } catch (err) {
-    send(chatId, 'Error: ' + err.message);
+    bot.sendMessage(chatId, `❌ Error: ${err.message}`);
   }
 });
 
 // ── /cancel ───────────────────────────────
 bot.onText(/\/cancel/, (msg) => {
   delete sessions[msg.chat.id];
-  send(msg.chat.id, 'Entry cancelled.');
+  bot.sendMessage(msg.chat.id, `❌ Entry cancelled.`);
 });
 
 // ── Inline keyboard handler (date buttons) ─
 bot.on('callback_query', async (query) => {
   const chatId = query.message.chat.id;
-  bot.answerCallbackQuery(query.id);
+
+  // Always answer first — stops the Telegram loading spinner
+  try { await bot.answerCallbackQuery(query.id); } catch (_) {}
 
   if (!sessions[chatId]) {
-    send(chatId, 'Session expired. Use /log to start again.');
+    bot.sendMessage(chatId, `Session expired. Use /log to start again.`);
     return;
   }
+
   const session = sessions[chatId];
 
-  if (query.data.startsWith('date:')) {
-    if (query.data === 'date:custom') {
-      session.step = 'date_custom';
-      send(chatId, 'Type the date in YYYY-MM-DD format:\ne.g. 2025-06-18');
-      return;
-    }
-    // Date button tapped
-    const chosenDate      = query.data.replace('date:', '');
-    session.data.date     = chosenDate;
-    session.step          = 'sku';
-    session.data.skuIndex = 0;
-    send(chatId, 'Date set: ' + chosenDate + '\n\nNow enter each item:');
-    promptSKU(chatId, 0);
+  if (!query.data.startsWith('date:')) return;
+
+  if (query.data === 'date:custom') {
+    session.step = 'date_custom';
+    bot.sendMessage(chatId, `✏️ Type the date in YYYY-MM-DD format:\ne.g. 2025-06-18`);
+    return;
   }
+
+  // A quick date was selected
+  const chosenDate      = query.data.replace('date:', '');
+  session.data.date     = chosenDate;
+  session.data.skuIndex = 0;
+  session.step          = 'sku';
+
+  bot.sendMessage(chatId, `✅ Date set: ${chosenDate}`);
+  promptSKU(chatId, 0);
 });
 
 // ── Multi-step text input ─────────────────
@@ -279,10 +280,10 @@ bot.on('message', async (msg) => {
   const steps = {
 
     // Collect salesperson name
-    setname: function() {
+    setname() {
       const name = text;
       spNames[chatId] = name;
-      send(chatId, 'Name saved as ' + name + '!');
+      bot.sendMessage(chatId, `✅ Name saved as ${name}!`);
       if (session.data.afterName === 'log') {
         sessions[chatId] = { step: 'date', data: { salesperson: name, skuData: [], skuIndex: 0 } };
         sendDatePicker(chatId);
@@ -291,29 +292,34 @@ bot.on('message', async (msg) => {
       }
     },
 
+    // date step: user typed instead of tapping button — remind them
+    date() {
+      bot.sendMessage(chatId, `☝️ Please tap one of the date buttons above, or tap "Type a different date".`);
+    },
+
     // Waiting for typed custom date
-    date_custom: function() {
+    date_custom() {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) {
-        send(chatId, 'Wrong format. Enter as YYYY-MM-DD\ne.g. 2025-06-18');
+        bot.sendMessage(chatId, `❌ Wrong format. Enter as YYYY-MM-DD\ne.g. 2025-06-18`);
         return;
       }
       session.data.date     = text;
-      session.step          = 'sku';
       session.data.skuIndex = 0;
-      send(chatId, 'Date set: ' + text);
+      session.step          = 'sku';
+      bot.sendMessage(chatId, `✅ Date set: ${text}`);
       promptSKU(chatId, 0);
     },
 
     // Entering pcs per SKU (sold,wasted)
-    sku: function() {
-      const parts = text.split(',').map(function(s) { return parseInt(s.trim(), 10); });
-      if (parts.length !== 2 || parts.some(isNaN) || parts.some(function(v) { return v < 0; })) {
-        send(chatId, 'Enter two numbers: sold,wasted\ne.g. 25,3\nType 0,0 if none');
+    sku() {
+      const parts = text.split(',').map(s => parseInt(s.trim()));
+      if (parts.length !== 2 || parts.some(isNaN) || parts.some(v => v < 0)) {
+        bot.sendMessage(chatId, `❌ Enter two numbers: sold,wasted\ne.g. 25,3\nType 0,0 if none`);
         return;
       }
-      const sold   = parts[0];
-      const wasted = parts[1];
-      const sku    = SKUS[session.data.skuIndex];
+
+      const [sold, wasted] = parts;
+      const sku = SKUS[session.data.skuIndex];
       session.data.skuData.push(calcSKUData(sku, sold, wasted));
       session.data.skuIndex++;
 
@@ -321,12 +327,12 @@ bot.on('message', async (msg) => {
         promptSKU(chatId, session.data.skuIndex);
       } else {
         session.step = 'notes';
-        send(chatId, 'Last step — Notes\n\nAny notes for today?\n(type skip to leave empty)');
+        bot.sendMessage(chatId, `📝 Last step — Notes\n\nAny notes for today?\nType skip to leave empty`);
       }
     },
 
     // Final step: save everything
-    notes: async function() {
+    async notes() {
       session.data.notes     = text.toLowerCase() === 'skip' ? '' : text;
       session.data.timestamp = new Date().toISOString();
       session.data.totals    = calcTotals(session.data.skuData);
@@ -335,25 +341,25 @@ bot.on('message', async (msg) => {
         await saveEntry(session.data);
         const t = session.data.totals;
 
-        let reply = 'Saved!\n\n';
-        reply += 'Date: ' + session.data.date + '  |  Salesperson: ' + session.data.salesperson + '\n\n';
-        reply += 'SKU Breakdown:\n';
-        session.data.skuData.forEach(function(s) {
-          reply += s.name + ': ' + s.sold + ' sold, ' + s.wasted + ' wasted\n';
-          reply += '  Revenue: ' + formatRM(s.revenue) + ' | GP: ' + formatRM(s.grossProfit) + ' | Wastage: ' + formatRM(s.wastageCost) + '\n';
+        let reply = `✅ Saved!\n\n`;
+        reply += `Date: ${session.data.date} | Salesperson: ${session.data.salesperson}\n\n`;
+        reply += `SKU Breakdown:\n`;
+        session.data.skuData.forEach(s => {
+          reply += `• ${s.name}: ${s.sold} sold, ${s.wasted} wasted\n`;
+          reply += `  Revenue: ${formatRM(s.revenue)} | GP: ${formatRM(s.grossProfit)} | Wastage: ${formatRM(s.wastageCost)}\n`;
         });
-        reply += '\nSummary:\n';
-        reply += 'Revenue:      ' + formatRM(t.revenue) + '\n';
-        reply += 'Gross Profit: ' + formatRM(t.grossProfit) + '\n';
-        reply += 'Wastage:      ' + formatRM(t.wastageCost) + '\n';
-        reply += 'Net:          ' + formatRM(t.netProfit) + '\n';
-        reply += 'Margin:       ' + t.grossMarginPct + '%\n';
-        if (session.data.notes) reply += 'Notes: ' + session.data.notes + '\n';
-        reply += '\nDashboard updated!';
+        reply += `\nSummary:\n`;
+        reply += `Revenue:      ${formatRM(t.revenue)}\n`;
+        reply += `Gross Profit: ${formatRM(t.grossProfit)}\n`;
+        reply += `Wastage:      ${formatRM(t.wastageCost)}\n`;
+        reply += `Net:          ${formatRM(t.netProfit)}\n`;
+        reply += `Margin:       ${t.grossMarginPct}%\n`;
+        if (session.data.notes) reply += `Notes: ${session.data.notes}\n`;
+        reply += `\nDashboard updated!`;
 
-        send(chatId, reply);
+        bot.sendMessage(chatId, reply);
       } catch (err) {
-        send(chatId, 'Failed to save: ' + err.message);
+        bot.sendMessage(chatId, `❌ Failed to save: ${err.message}`);
       }
       delete sessions[chatId];
     }
@@ -362,15 +368,15 @@ bot.on('message', async (msg) => {
   if (steps[session.step]) await steps[session.step]();
 });
 
-bot.on('polling_error', function(err) { console.error('Bot error:', err.message); });
+bot.on('polling_error', (err) => console.error('Bot error:', err.message));
 
 // ─────────────────────────────────────────
 //  Start
 // ─────────────────────────────────────────
 async function start() {
   await connectDB();
-  app.listen(PORT, function() { console.log('Dashboard running on port ' + PORT); });
-  console.log('Telegram bot running...');
+  app.listen(PORT, () => console.log(`✅ Dashboard → http://localhost:${PORT}`));
+  console.log(`🤖 Telegram bot running...`);
 }
 
-start().catch(function(err) { console.error('Startup failed:', err.message); process.exit(1); });
+start().catch(err => { console.error('❌ Startup failed:', err.message); process.exit(1); });
