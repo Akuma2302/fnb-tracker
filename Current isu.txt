@@ -1,0 +1,6 @@
+Current issue
+the current problem right now is when I click the date, the message is not continue and cant continue the conversation which is make it problematic
+
+in this zip file, we have complete source code for the program
+
+first what i want you to do ist to find the bug and fix which part is problem so when we ust the tele bot it can be fully function
