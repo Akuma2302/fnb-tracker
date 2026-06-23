@@ -22,7 +22,7 @@ if (!BOT_TOKEN || !MONGO_URI) {
 //  Replaces direct keyword matching with
 //  NousResearch Hermes for natural language
 // ─────────────────────────────────────────
-const HERMES_API_URL = 'https://hermes-agent.nousresearch.com/v1/chat/completions';
+const HERMES_API_URL = 'http://localhost:8642/v1/chat/completions';
 const HERMES_MODEL   = 'hermes-agent'; // adjust to current Hermes model name if different
 const HERMES_API_KEY = 'Asyraaf1234!';
 
