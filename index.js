@@ -26,10 +26,8 @@ const HERMES_API_URL = 'https://hermes-agent.nousresearch.com/v1/chat/completion
 const HERMES_MODEL   = 'hermes-agent'; // adjust to current Hermes model name if different
 const HERMES_API_KEY = 'Asyraaf1234!';
 
-
 // ══════════════════════════════════════════
-//  ✏️  SKU DEFINITIONS — EDIT HERE
-//  Change name, salePrice, costPrice to match your menu
+//  SKU DEFINITIONS
 // ══════════════════════════════════════════
 const SKUS = [
   { id: 1, name: 'Item A', salePrice: 10.00, costPrice: 7.00  },
@@ -39,9 +37,6 @@ const SKUS = [
   { id: 5, name: 'Item E', salePrice: 10.00, costPrice: 8.50  },
 ];
 
-// ══════════════════════════════════════════
-//  Daily Revenue Target
-// ══════════════════════════════════════════
 const DAILY_TARGET_REVENUE = 3200;
 const DAILY_TARGET_UNITS   = 320;
 const DAILY_WASTAGE_LIMIT  = 500;
@@ -80,8 +75,6 @@ function calcTotals(skuData) {
 
 // ─────────────────────────────────────────
 //  MongoDB
-//  NEW: entries now keyed by date + salesperson
-//  Collection: entries (one doc per salesperson per date)
 // ─────────────────────────────────────────
 let col;
 
@@ -89,12 +82,10 @@ async function connectDB() {
   const client = new MongoClient(MONGO_URI);
   await client.connect();
   col = client.db('fnb_tracker').collection('entries');
-  // compound unique index: one entry per salesperson per date
   await col.createIndex({ date: 1, salesperson: 1 }, { unique: true });
   console.log('✅ Connected to MongoDB');
 }
 
-// Save or update ONE salesperson's entry for the day
 async function saveEntry(data) {
   await col.replaceOne(
     { date: data.date, salesperson: data.salesperson },
@@ -103,13 +94,12 @@ async function saveEntry(data) {
   );
 }
 
-// Return all entries (sorted by date asc)
 async function getEntries() {
   return col.find({}, { projection: { _id: 0 } }).sort({ date: 1 }).toArray();
 }
 
 // ─────────────────────────────────────────
-//  Date / Format Helpers
+//  Helpers
 // ─────────────────────────────────────────
 function getMalaysiaDate(offsetDays = 0) {
   const d = new Date();
@@ -120,74 +110,41 @@ function getMalaysiaDate(offsetDays = 0) {
 function formatRM(val) { return `RM ${Number(val).toFixed(2)}`; }
 
 // ─────────────────────────────────────────
-//  Hermes Agent — natural language intent
+//  Hermes intent classifier (optional)
 // ─────────────────────────────────────────
-//
-//  HOW IT WORKS:
-//  When a user sends a free-text message that doesn't match a
-//  structured /command, we send it to Hermes and ask it to classify
-//  the intent as one of: LOG, VIEW, HELP, CANCEL, UNKNOWN.
-//  For LOG/VIEW it also extracts any date or name mentioned.
-//
-//  This means salespersons can say things like:
-//    "nak log jualan hari ni"
-//    "tunjuk sales minggu lepas"
-//    "I want to record today's numbers"
-//  ...and the bot will understand.
-//
-async function classifyIntent(text, salesperson) {
-  const systemPrompt = `You are an intent classifier for a food & beverage sales tracking Telegram bot.
-Classify the user's message into exactly one of these intents:
-- LOG: user wants to log/record/submit/update their sales for a day
-- VIEW: user wants to see/check/view past sales data or reports
-- HELP: user needs help or doesn't know what to do
-- CANCEL: user wants to cancel/stop the current operation
-- UNKNOWN: none of the above
-
-Also extract:
-- date_hint: any date mentioned (ISO format YYYY-MM-DD) or null
-- name_hint: any salesperson name mentioned or null
-
-Respond ONLY with valid JSON in this exact format:
-{"intent":"LOG","date_hint":null,"name_hint":null}
-
-The salesperson's name is: ${salesperson}`;
-
+async function classifyIntent(text) {
+  if (!HERMES_API_KEY) return { intent: 'UNKNOWN' };
   try {
-    const response = await fetch(HERMES_API_URL, {
+    const { default: fetch } = await import('node-fetch');
+    const res  = await fetch(HERMES_API_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${HERMES_API_KEY}`,
-      },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${HERMES_API_KEY}` },
       body: JSON.stringify({
         model: HERMES_MODEL,
         messages: [
-          { role: 'system', content: systemPrompt },
+          { role: 'system', content: 'Classify the user message into one word: LOG, VIEW, HELP, CANCEL, or UNKNOWN. Reply with ONLY that one word.' },
           { role: 'user', content: text },
         ],
         temperature: 0,
-        max_tokens: 100,
+        max_tokens: 10,
       }),
     });
-
-    const data = await response.json();
-    const raw  = data.choices?.[0]?.message?.content?.trim() || '{}';
-    return JSON.parse(raw);
+    const data   = await res.json();
+    const intent = (data.choices?.[0]?.message?.content?.trim() || 'UNKNOWN').toUpperCase();
+    return { intent: ['LOG','VIEW','HELP','CANCEL'].includes(intent) ? intent : 'UNKNOWN' };
   } catch (err) {
-    console.error('Hermes API error:', err.message);
-    return { intent: 'UNKNOWN', date_hint: null, name_hint: null };
+    console.error('Hermes error:', err.message);
+    return { intent: 'UNKNOWN' };
   }
 }
 
 // ─────────────────────────────────────────
-//  Express — API + static dashboard
+//  Express
 // ─────────────────────────────────────────
 const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// All entries + SKU definitions
 app.get('/api/data', async (req, res) => {
   try {
     const entries = await getEntries();
@@ -203,81 +160,73 @@ app.get('/health', (req, res) => res.json({ status: 'ok' }));
 //  Telegram Bot
 // ─────────────────────────────────────────
 const bot      = new TelegramBot(BOT_TOKEN, { polling: true });
-const sessions = {};   // keyed by chatId
 
-// ── Helper: persist salesperson name ──────
-// Stored per chatId in MongoDB (optional but
-// nice UX so they don't retype their name)
-const spNames = {}; // in-memory cache: chatId → name
+// sessions[chatId] = { step, data }
+// steps: 'setname' | 'date' | 'date_custom' | 'sku' | 'notes'
+const sessions = {};
 
-async function getOrAskName(chatId) {
-  if (spNames[chatId]) return spNames[chatId];
-  // Ask
-  bot.sendMessage(chatId,
-    `👤 *Who are you?*\n\nType your *name* so I can track your sales separately.\n_e.g. Azri_`,
-    { parse_mode: 'Markdown' }
-  );
-  return null;
-}
+// spNames[chatId] = 'Akmal'  (survives across sessions in-memory)
+const spNames  = {};
 
-// ── Date picker keyboard ──────────────────
+// ── UI helpers ────────────────────────────
 function sendDatePicker(chatId) {
   const today = getMalaysiaDate(0);
   const yest  = getMalaysiaDate(1);
-  bot.sendMessage(chatId, `📅 *Step 1 — Choose Date*\n\nTap a quick option or type your own:`, {
-    parse_mode: 'Markdown',
-    reply_markup: {
-      inline_keyboard: [
-        [
-          { text: `📅 Today (${today})`,    callback_data: `date:${today}` },
-          { text: `⬅️ Yesterday (${yest})`, callback_data: `date:${yest}`  },
+  bot.sendMessage(chatId,
+    `📅 *Step 1 — Choose Date*\n\nTap Today/Yesterday or type your own:`,
+    {
+      parse_mode: 'Markdown',
+      reply_markup: {
+        inline_keyboard: [
+          [
+            { text: `📅 Today (${today})`,     callback_data: `date:${today}` },
+            { text: `⬅️ Yesterday (${yest})`,  callback_data: `date:${yest}`  },
+          ],
+          [
+            { text: '✏️ Type a different date', callback_data: 'date:custom'  },
+          ],
         ],
-        [
-          { text: '✏️ Type a different date', callback_data: 'date:custom' },
-        ],
-      ],
-    },
-  });
+      },
+    }
+  );
 }
 
-// ── SKU prompt ────────────────────────────
 function promptSKU(chatId, idx) {
   const sku  = SKUS[idx];
   const step = idx + 2;
   bot.sendMessage(chatId,
     `🛒 *Step ${step} of ${SKUS.length + 2} — ${sku.name}*\n\n` +
     `💰 Sale: RM${sku.salePrice} | Cost: RM${sku.costPrice}\n\n` +
-    `Enter *sold,wasted* pcs separated by comma:\n` +
-    `_e.g. 25,3 = 25 sold, 3 wasted_\n` +
-    `_Type 0,0 if not sold today_`,
+    `Enter *sold,wasted* — e.g. \`25,3\`\n_(type \`0,0\` if not sold today)_`,
     { parse_mode: 'Markdown' }
   );
+}
+
+function startLogFlow(chatId, name) {
+  sessions[chatId] = {
+    step: 'sku',          // ← skip 'date' step, jump straight after date picker
+    data: { salesperson: name, date: null, skuData: [], skuIndex: 0 },
+  };
+  sendDatePicker(chatId);
+  // session stays at step 'sku' — date is set by callback_query, then promptSKU fires
+  // We use a special intermediate step called 'awaiting_date' to avoid confusion:
+  sessions[chatId].step = 'awaiting_date';
 }
 
 // ── /start ───────────────────────────────
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
-  const tgName = msg.from?.first_name || msg.from?.username || 'there';
-
+  const tgName = msg.from?.first_name || 'there';
   bot.sendMessage(chatId,
-    `🍽️ *FnB Daily Tracker*\n\n` +
-    `Hi ${tgName}! Track your daily sales by SKU.\n\n` +
+    `🍽️ *FnB Daily Tracker*\n\nHi ${tgName}!\n\n` +
     `📋 *Commands:*\n` +
-    `/log    — Log your sales for a day\n` +
-    `/view   — View your last 5 entries\n` +
-    `/setname — Set or change your name\n` +
-    `/cancel — Cancel current entry\n` +
-    `/help   — Show this menu\n\n` +
-    `💡 You can also just *type naturally* — I'll understand you!`,
+    `/log      — Log today's sales\n` +
+    `/view     — View your last 5 entries\n` +
+    `/setname  — Change your name\n` +
+    `/cancel   — Cancel current entry\n` +
+    `/help     — Show this menu`,
     { parse_mode: 'Markdown' }
   );
-});
-
-// ── /setname ─────────────────────────────
-bot.onText(/\/setname/, (msg) => {
-  const chatId = msg.chat.id;
-  sessions[chatId] = { step: 'setname' };
-  bot.sendMessage(chatId, `👤 Type your *name*:`, { parse_mode: 'Markdown' });
 });
 
 // ── /help ─────────────────────────────────
@@ -285,25 +234,30 @@ bot.onText(/\/help/, (msg) => {
   bot.sendMessage(msg.chat.id,
     `📋 *Commands:*\n\n` +
     `/log      — Log daily sales by SKU\n` +
-    `/view     — View your last 5 entries\n` +
-    `/setname  — Set or change your display name\n` +
-    `/cancel   — Cancel current entry\n\n` +
-    `💡 Or just type naturally — I understand Bahasa & English!`,
+    `/view     — View last 5 entries\n` +
+    `/setname  — Update your name\n` +
+    `/cancel   — Cancel current entry`,
     { parse_mode: 'Markdown' }
   );
 });
 
-// ── /log ─────────────────────────────────
-bot.onText(/\/log/, async (msg) => {
+// ── /setname ─────────────────────────────
+bot.onText(/\/setname/, (msg) => {
   const chatId = msg.chat.id;
-  const name   = spNames[chatId];
-  if (!name) {
-    sessions[chatId] = { step: 'setname', afterName: 'log' };
-    bot.sendMessage(chatId, `👤 First, what's your *name*? Type it below:`, { parse_mode: 'Markdown' });
+  sessions[chatId] = { step: 'setname', data: {} };
+  bot.sendMessage(chatId, `👤 What's your name?`, { parse_mode: 'Markdown' });
+});
+
+// ── /log ─────────────────────────────────
+bot.onText(/\/log/, (msg) => {
+  const chatId = msg.chat.id;
+  if (!spNames[chatId]) {
+    // Need name first — store intent so after name we auto-start log
+    sessions[chatId] = { step: 'setname', data: { afterName: 'log' } };
+    bot.sendMessage(chatId, `👤 First, what's your *name*?`, { parse_mode: 'Markdown' });
     return;
   }
-  sessions[chatId] = { step: 'date', data: { salesperson: name, skuData: [], skuIndex: 0 } };
-  sendDatePicker(chatId);
+  startLogFlow(chatId, spNames[chatId]);
 });
 
 // ── /view ─────────────────────────────────
@@ -312,27 +266,20 @@ bot.onText(/\/view/, async (msg) => {
   const name   = spNames[chatId];
   try {
     const all    = await getEntries();
-    // Filter to this salesperson if name known
     const mine   = name ? all.filter(e => e.salesperson === name) : all;
     const recent = mine.slice(-5).reverse();
-
-    if (recent.length === 0) {
-      return bot.sendMessage(chatId, `📭 No entries yet${name ? ` for ${name}` : ''}. Use /log to add data!`);
+    if (!recent.length) {
+      return bot.sendMessage(chatId, `📭 No entries yet. Use /log to add data!`);
     }
-
-    let text = `📊 *Last ${recent.length} Entries${name ? ` (${name})` : ''}:*\n\n`;
+    let text = `📊 *Last ${recent.length} Entries${name ? ` — ${name}` : ''}:*\n\n`;
     recent.forEach(e => {
       const t = e.totals;
       text += `📅 *${e.date}*\n`;
-      e.skuData.forEach(s => {
+      (e.skuData || []).forEach(s => {
         text += `  • ${s.name}: ${s.sold} sold, ${s.wasted} wasted → ${formatRM(s.revenue)}\n`;
       });
-      text += `💰 Revenue: ${formatRM(t.revenue)} | 📈 GP: ${formatRM(t.grossProfit)} | 🗑️ Wastage: ${formatRM(t.wastageCost)}\n`;
-      text += `📊 Margin: ${t.grossMarginPct}%\n`;
-      if (e.notes) text += `📝 ${e.notes}\n`;
-      text += `\n`;
+      text += `💰 ${formatRM(t.revenue)} | GP: ${formatRM(t.grossProfit)} | Waste: ${formatRM(t.wastageCost)} | ${t.grossMarginPct}%\n\n`;
     });
-
     bot.sendMessage(chatId, text, { parse_mode: 'Markdown' });
   } catch (err) {
     bot.sendMessage(chatId, `❌ Error: ${err.message}`);
@@ -345,114 +292,150 @@ bot.onText(/\/cancel/, (msg) => {
   bot.sendMessage(msg.chat.id, `❌ Entry cancelled.`);
 });
 
-// ── Inline keyboard (date buttons) ────────
+// ════════════════════════════════════════════
+//  CALLBACK QUERY — handles inline button taps
+//  THIS IS THE FIX: robust chatId + session lookup
+// ════════════════════════════════════════════
 bot.on('callback_query', async (query) => {
-  const chatId = query.message.chat.id;
-  bot.answerCallbackQuery(query.id);
+  // Always answer immediately — stops the Telegram "loading" spinner
+  await bot.answerCallbackQuery(query.id);
 
-  if (!sessions[chatId]) return;
+  // chatId can come from query.message.chat.id OR query.from.id (private chats same, groups differ)
+  const chatId  = query.message.chat.id;
   const session = sessions[chatId];
+
+  if (!session) {
+    // Session expired — tell user to restart
+    bot.sendMessage(chatId, `⏰ Session expired. Use /log to start again.`);
+    return;
+  }
 
   if (query.data.startsWith('date:')) {
     if (query.data === 'date:custom') {
       session.step = 'date_custom';
-      bot.sendMessage(chatId, `✏️ Type the date _(YYYY-MM-DD)_:\n_e.g. 2025-06-18_`, { parse_mode: 'Markdown' });
+      bot.sendMessage(chatId,
+        `✏️ Type the date in *YYYY-MM-DD* format:\n_e.g. 2025-06-18_`,
+        { parse_mode: 'Markdown' }
+      );
       return;
     }
-    session.data.date     = query.data.replace('date:', '');
-    session.step          = 'sku';
-    session.data.skuIndex = 0;
-    bot.sendMessage(chatId, `✅ Date set: *${session.data.date}*`, { parse_mode: 'Markdown' });
+
+    // A real date was picked
+    const chosenDate        = query.data.replace('date:', '');
+    session.data.date       = chosenDate;
+    session.data.skuIndex   = 0;
+    session.step            = 'sku';
+
+    bot.sendMessage(chatId, `✅ Date: *${chosenDate}*\n\nNow enter each SKU's numbers:`, { parse_mode: 'Markdown' });
     promptSKU(chatId, 0);
   }
 });
 
-// ── Multi-step text handler ────────────────
+// ════════════════════════════════════════════
+//  MESSAGE HANDLER — text input steps
+// ════════════════════════════════════════════
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
   const text   = (msg.text || '').trim();
 
+  // Ignore empty messages and /commands (handled by onText above)
   if (!text || text.startsWith('/')) return;
 
   const session = sessions[chatId];
 
-  // ── 1. If inside a structured session step ─
+  // ── Structured session steps ──────────────
   if (session) {
-    const step = session.step;
+    const { step, data } = session;
 
+    // ── Step: collect name ──
     if (step === 'setname') {
-      spNames[chatId] = text;
-      const afterName  = session.afterName;
+      const name = text;
+      spNames[chatId] = name;
       delete sessions[chatId];
-      bot.sendMessage(chatId, `✅ Name saved as *${text}*!`, { parse_mode: 'Markdown' });
-      if (afterName === 'log') {
-        sessions[chatId] = { step: 'date', data: { salesperson: text, skuData: [], skuIndex: 0 } };
-        sendDatePicker(chatId);
+      bot.sendMessage(chatId, `✅ Name saved as *${name}*!`, { parse_mode: 'Markdown' });
+      // If they came via /log, auto-start the log flow
+      if (data.afterName === 'log') {
+        startLogFlow(chatId, name);
       }
       return;
     }
 
+    // ── Step: awaiting_date (date picker shown, waiting for button tap OR ignore text) ──
+    if (step === 'awaiting_date') {
+      // User typed instead of tapping — remind them to tap a button
+      bot.sendMessage(chatId,
+        `☝️ Please *tap one of the date buttons* above, or tap "Type a different date".`,
+        { parse_mode: 'Markdown' }
+      );
+      return;
+    }
+
+    // ── Step: custom date typed ──
     if (step === 'date_custom') {
-      const valid = /^\d{4}-\d{2}-\d{2}$/.test(text);
-      if (!valid)
-        return bot.sendMessage(chatId, `❌ Wrong format. Enter as YYYY-MM-DD\n_e.g. 2025-06-18_`, { parse_mode: 'Markdown' });
-      session.data.date     = text;
-      session.step          = 'sku';
-      session.data.skuIndex = 0;
-      bot.sendMessage(chatId, `✅ Date set: *${text}*`, { parse_mode: 'Markdown' });
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) {
+        bot.sendMessage(chatId,
+          `❌ Wrong format. Enter as *YYYY-MM-DD*\n_e.g. 2025-06-18_`,
+          { parse_mode: 'Markdown' }
+        );
+        return;
+      }
+      data.date       = text;
+      data.skuIndex   = 0;
+      session.step    = 'sku';
+      bot.sendMessage(chatId, `✅ Date: *${text}*`, { parse_mode: 'Markdown' });
       promptSKU(chatId, 0);
       return;
     }
 
+    // ── Step: entering SKU quantities ──
     if (step === 'sku') {
-      const parts = text.split(',').map(s => parseInt(s.trim()));
-      if (parts.length !== 2 || parts.some(isNaN) || parts.some(v => v < 0))
-        return bot.sendMessage(chatId,
-          `❌ Enter two numbers: *sold,wasted*\n_e.g. 25,3_\n_Type 0,0 if none_`,
+      const parts = text.split(',').map(s => parseInt(s.trim(), 10));
+      if (parts.length !== 2 || parts.some(isNaN) || parts.some(v => v < 0)) {
+        bot.sendMessage(chatId,
+          `❌ Enter two numbers: *sold,wasted*\n_e.g. \`25,3\` or \`0,0\`_`,
           { parse_mode: 'Markdown' }
         );
-
+        return;
+      }
       const [sold, wasted] = parts;
-      const sku = SKUS[session.data.skuIndex];
-      session.data.skuData.push(calcSKUData(sku, sold, wasted));
-      session.data.skuIndex++;
+      const sku = SKUS[data.skuIndex];
+      data.skuData.push(calcSKUData(sku, sold, wasted));
+      data.skuIndex++;
 
-      if (session.data.skuIndex < SKUS.length) {
-        promptSKU(chatId, session.data.skuIndex);
+      if (data.skuIndex < SKUS.length) {
+        promptSKU(chatId, data.skuIndex);
       } else {
         session.step = 'notes';
         bot.sendMessage(chatId,
-          `📝 *Last step — Notes*\n\nAny notes for today?\n_(type *skip* to leave empty)_`,
+          `📝 *Last step — Notes*\n\nAny notes? _(type \`skip\` to leave empty)_`,
           { parse_mode: 'Markdown' }
         );
       }
       return;
     }
 
+    // ── Step: notes + save ──
     if (step === 'notes') {
-      session.data.notes     = text.toLowerCase() === 'skip' ? '' : text;
-      session.data.timestamp = new Date().toISOString();
-      session.data.totals    = calcTotals(session.data.skuData);
+      data.notes     = text.toLowerCase() === 'skip' ? '' : text;
+      data.timestamp = new Date().toISOString();
+      data.totals    = calcTotals(data.skuData);
 
       try {
-        await saveEntry(session.data);
-        const t = session.data.totals;
-        let reply  = `✅ *Saved!*\n\n`;
-        reply += `📅 Date: *${session.data.date}*\n`;
-        reply += `👤 Salesperson: *${session.data.salesperson}*\n\n`;
+        await saveEntry(data);
+        const t = data.totals;
+        let reply  = `✅ *Saved!*\n\n📅 *${data.date}* · 👤 *${data.salesperson}*\n\n`;
         reply += `*SKU Breakdown:*\n`;
-        session.data.skuData.forEach(s => {
-          reply += `• ${s.name}: ${s.sold} sold, ${s.wasted} wasted → Rev: ${formatRM(s.revenue)} | Wastage: ${formatRM(s.wastageCost)}\n`;
+        data.skuData.forEach(s => {
+          reply += `• ${s.name}: ${s.sold} sold, ${s.wasted} wasted\n`;
+          reply += `  Rev: ${formatRM(s.revenue)} | Waste: ${formatRM(s.wastageCost)}\n`;
         });
         reply += `\n📊 *Summary:*\n`;
-        reply += `💰 Revenue:       ${formatRM(t.revenue)}\n`;
-        reply += `📈 Gross Profit:  ${formatRM(t.grossProfit)}\n`;
-        reply += `🗑️ Wastage Cost:  ${formatRM(t.wastageCost)}\n`;
-        reply += `📊 Net:           ${formatRM(t.netProfit)}\n`;
-        reply += `📉 Gross Margin:  ${t.grossMarginPct}%\n`;
-        if (session.data.notes) reply += `📝 Notes: ${session.data.notes}\n`;
+        reply += `💰 Revenue: ${formatRM(t.revenue)}\n`;
+        reply += `📈 Gross Profit: ${formatRM(t.grossProfit)}\n`;
+        reply += `🗑️ Wastage: ${formatRM(t.wastageCost)}\n`;
+        reply += `📉 Margin: ${t.grossMarginPct}%\n`;
+        if (data.notes) reply += `📝 ${data.notes}\n`;
         reply += `\n_Dashboard updated!_`;
-
         bot.sendMessage(chatId, reply, { parse_mode: 'Markdown' });
       } catch (err) {
         bot.sendMessage(chatId, `❌ Failed to save: ${err.message}`);
@@ -462,36 +445,41 @@ bot.on('message', async (msg) => {
     }
   }
 
-  // ── 2. No active session — use Hermes to classify intent ──
-  const name   = spNames[chatId] || msg.from?.first_name || 'Unknown';
-  const result = await classifyIntent(text, name);
+  // ── No active session — try Hermes or keyword fallback ──
+  const result = await classifyIntent(text);
+  const intent = result.intent;
 
-  if (result.intent === 'LOG') {
+  // Simple keyword fallback if Hermes is not configured
+  const lower = text.toLowerCase();
+  const resolvedIntent = intent !== 'UNKNOWN' ? intent
+    : lower.includes('log') || lower.includes('record') || lower.includes('jualan') || lower.includes('sales') ? 'LOG'
+    : lower.includes('view') || lower.includes('tunjuk') || lower.includes('check') ? 'VIEW'
+    : lower.includes('help') || lower.includes('tolong') ? 'HELP'
+    : lower.includes('cancel') || lower.includes('batal') ? 'CANCEL'
+    : 'UNKNOWN';
+
+  if (resolvedIntent === 'LOG') {
     if (!spNames[chatId]) {
-      sessions[chatId] = { step: 'setname', afterName: 'log' };
-      bot.sendMessage(chatId, `👤 Before logging, what's your *name*?`, { parse_mode: 'Markdown' });
+      sessions[chatId] = { step: 'setname', data: { afterName: 'log' } };
+      bot.sendMessage(chatId, `👤 First, what's your *name*?`, { parse_mode: 'Markdown' });
     } else {
-      sessions[chatId] = { step: 'date', data: { salesperson: spNames[chatId], skuData: [], skuIndex: 0 } };
-      sendDatePicker(chatId);
+      startLogFlow(chatId, spNames[chatId]);
     }
-  } else if (result.intent === 'VIEW') {
+  } else if (resolvedIntent === 'VIEW') {
     bot.sendMessage(chatId, `Use /view to see your recent entries.`);
-  } else if (result.intent === 'HELP') {
-    bot.sendMessage(chatId,
-      `📋 *What I can do:*\n/log — record your sales\n/view — see past entries\n/setname — update your name`,
-      { parse_mode: 'Markdown' }
-    );
-  } else if (result.intent === 'CANCEL') {
+  } else if (resolvedIntent === 'HELP') {
+    bot.sendMessage(chatId, `Use /help to see available commands.`);
+  } else if (resolvedIntent === 'CANCEL') {
     delete sessions[chatId];
     bot.sendMessage(chatId, `❌ Cancelled.`);
   } else {
     bot.sendMessage(chatId,
-      `🤔 I'm not sure what you mean. Try /log to record sales or /help for options.`
+      `🤔 Not sure what you mean.\n\nTry:\n/log — record sales\n/view — see entries\n/help — all commands`
     );
   }
 });
 
-bot.on('polling_error', (err) => console.error('Bot error:', err.message));
+bot.on('polling_error', (err) => console.error('Bot polling error:', err.message));
 
 // ─────────────────────────────────────────
 //  Start
@@ -499,7 +487,7 @@ bot.on('polling_error', (err) => console.error('Bot error:', err.message));
 async function start() {
   await connectDB();
   app.listen(PORT, () => console.log(`✅ Dashboard → http://localhost:${PORT}`));
-  console.log(`🤖 Telegram bot running (Hermes agent enabled)...`);
+  console.log(`🤖 Bot running${HERMES_API_KEY ? ' (Hermes enabled)' : ' (keyword fallback mode)'}...`);
 }
 
 start().catch(err => { console.error('❌ Startup failed:', err.message); process.exit(1); });
