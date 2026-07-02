@@ -27,11 +27,12 @@
 
   <!-- ── Tabs ── -->
   <div class="tab-row">
-    <div class="tab active" onclick="switchTab('overview',this)">Executive Overview</div>
-    <div class="tab" onclick="switchTab('sku',this)">SKU Deep-Dive</div>
-    <div class="tab" onclick="switchTab('salesperson',this)">Salesperson</div>
-    <div class="tab" onclick="switchTab('wastage',this)">Wastage Tracker</div>
-    <div class="tab" onclick="switchTab('targets',this)">Target vs Actual</div>
+    <div class="tab active" onclick="switchTab('overview',this)"><span class="tab-icon">📊</span>Overview</div>
+    <div class="tab" onclick="switchTab('sku',this)"><span class="tab-icon">📦</span>SKU Deep-Dive</div>
+    <div class="tab" onclick="switchTab('salesperson',this)"><span class="tab-icon">👥</span>Salesperson</div>
+    <div class="tab" onclick="switchTab('wastage',this)"><span class="tab-icon">🗑️</span>Wastage</div>
+    <div class="tab" onclick="switchTab('targets',this)"><span class="tab-icon">🎯</span>Target vs Actual</div>
+    <div class="tab" onclick="switchTab('log',this)"><span class="tab-icon">📋</span>Daily Log</div>
   </div>
 
   <!-- ── Filter bar ── -->
@@ -105,12 +106,6 @@
       </div>
     </div>
 
-    <!-- Daily log table -->
-    <div class="card">
-      <div class="card-title"><span class="icon">📋</span> Daily Log</div>
-      <div class="table-wrap" id="log-table"><div class="placeholder">Loading…</div></div>
-    </div>
-
   </div><!-- /tab-overview -->
 
 
@@ -173,6 +168,15 @@
     </div>
   </div>
 
+  <!-- ══════════════════════════════════════
+       TAB: DAILY LOG
+  ══════════════════════════════════════ -->
+  <div id="tab-log" style="display:none">
+    <div class="card">
+      <div class="card-title"><span class="icon">📋</span> Daily Log</div>
+      <div class="table-wrap" id="log-table"><div class="placeholder">Loading…</div></div>
+    </div>
+  </div>
 </div><!-- /container -->
 
 <script type="module" src="/src/main.js"></script>

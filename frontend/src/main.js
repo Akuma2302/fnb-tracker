@@ -6,6 +6,7 @@ import { renderSkuDeepDive } from './pages/skuDeepDive.js';
 import { renderSalesperson } from './pages/salesperson.js';
 import { renderWastage } from './pages/wastage.js';
 import { renderTargets } from './pages/targets.js';
+import { renderDailyLog } from './pages/dailyLog.js';
 
 // ── Global state ──
 const state = {
@@ -62,13 +63,14 @@ function render() {
     case 'salesperson': renderSalesperson(ctx); break;
     case 'wastage': renderWastage(ctx); break;
     case 'targets': renderTargets(ctx); break;
+    case 'log': renderDailyLog(ctx); break;
   }
 }
 
 // ── Tab switching ──
 function switchTab(name, el) {
   state.activeTab = name;
-  ['overview', 'sku', 'salesperson', 'wastage', 'targets'].forEach((t) => {
+  ['overview', 'sku', 'salesperson', 'wastage', 'targets', 'log'].forEach((t) => {
     document.getElementById('tab-' + t).style.display = t === name ? '' : 'none';
   });
   document.querySelectorAll('.tab').forEach((t) => t.classList.remove('active'));
