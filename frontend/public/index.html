@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FnB Executive Dashboard</title>
+  <link rel="stylesheet" href="/styles.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<div class="header">
+  <div class="header-left">
+    <div class="header-logo">🍽️</div>
+    <div>
+      <div class="header-title">FnB Executive Dashboard</div>
+      <div class="header-sub" id="last-updated">Loading…</div>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+    <select class="sp-select" id="sp-filter" onchange="render()">
+      <option value="all">All Salespersons</option>
+    </select>
+    <button class="btn-refresh" onclick="loadData()">↻ Refresh</button>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- ── Tabs ── -->
+  <div class="tab-row">
+    <div class="tab active" onclick="switchTab('overview',this)">Executive Overview</div>
+    <div class="tab" onclick="switchTab('sku',this)">SKU Deep-Dive</div>
+    <div class="tab" onclick="switchTab('salesperson',this)">Salesperson</div>
+    <div class="tab" onclick="switchTab('wastage',this)">Wastage Tracker</div>
+    <div class="tab" onclick="switchTab('targets',this)">Target vs Actual</div>
+  </div>
+
+  <!-- ── Filter bar ── -->
+  <div class="filter-bar">
+    <span style="font-size:11px;color:var(--subtle);margin-right:2px;">Period:</span>
+    <button class="filter-btn active" onclick="setFilter('today',this)">Today</button>
+    <button class="filter-btn" onclick="setFilter('yesterday',this)">Yesterday</button>
+    <button class="filter-btn" onclick="setFilter('3days',this)">Last 3 Days</button>
+    <button class="filter-btn" onclick="setFilter('week',this)">This Week</button>
+    <button class="filter-btn" onclick="setFilter('all',this)">All Time</button>
+    <div class="date-range">
+      <input type="date" id="dateFrom" class="date-input" onchange="setCustom()"/>
+      <span class="date-sep">→</span>
+      <input type="date" id="dateTo" class="date-input" onchange="setCustom()"/>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       TAB: OVERVIEW
+  ══════════════════════════════════════ -->
+  <div id="tab-overview">
+
+    <!-- Metric cards -->
+    <div class="metrics-grid" id="metrics-grid">
+      <div class="placeholder">Loading…</div>
+    </div>
+
+    <!-- Daily Targets — shown above SKU Performance -->
+    <div class="card">
+      <div class="card-title"><span class="icon">🎯</span> Daily Targets</div>
+      <div id="daily-targets"><div class="placeholder">Loading…</div></div>
+    </div>
+
+    <div class="grid-2">
+
+      <!-- SKU Performance -->
+      <div class="card">
+        <div class="card-title"><span class="icon">📦</span> SKU Performance</div>
+        <div class="chip-row" id="sku-sort-chips">
+          <div class="chip active" onclick="setSkuSort('revenue',this)">Revenue</div>
+          <div class="chip" onclick="setSkuSort('grossProfit',this)">Gross Profit</div>
+          <div class="chip" onclick="setSkuSort('wastageCost',this)">Wastage</div>
+          <div class="chip" onclick="setSkuSort('sold',this)">Units Sold</div>
+        </div>
+        <div class="sku-header">
+          <span class="col-name">SKU</span>
+          <span class="col-bar"></span>
+          <span class="col-rev">Revenue</span>
+          <span class="col-waste">Waste</span>
+          <span class="col-margin">Margin</span>
+        </div>
+        <div id="sku-perf-rows"><div class="placeholder">Loading…</div></div>
+        <div class="note-line" id="sku-note"></div>
+      </div>
+
+      <!-- Salesperson Leaderboard -->
+      <div class="card">
+        <div class="card-title"><span class="icon">🏆</span> Salesperson Leaderboard</div>
+        <div id="sp-leaderboard"><div class="placeholder">Loading…</div></div>
+      </div>
+
+    </div>
+
+    <!-- Charts -->
+    <div class="grid-2">
+      <div class="chart-card">
+        <h3>📈 Revenue Trend</h3>
+        <canvas id="revenueChart" height="190"></canvas>
+      </div>
+      <div class="chart-card">
+        <h3>📊 Revenue vs GP vs Wastage by SKU</h3>
+        <canvas id="skuChart" height="190"></canvas>
+      </div>
+    </div>
+
+    <!-- Daily log table -->
+    <div class="card">
+      <div class="card-title"><span class="icon">📋</span> Daily Log</div>
+      <div class="table-wrap" id="log-table"><div class="placeholder">Loading…</div></div>
+    </div>
+
+  </div><!-- /tab-overview -->
+
+
+  <!-- ══════════════════════════════════════
+       TAB: SKU DEEP-DIVE — image grid, 2 columns on mobile
+  ══════════════════════════════════════ -->
+  <div id="tab-sku" style="display:none">
+    <div class="item-grid" id="sku-cards"><div class="placeholder">Loading…</div></div>
+    <div class="chart-card">
+      <h3>📊 SKU Revenue Trend</h3>
+      <canvas id="skuTrendChart" height="200"></canvas>
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════
+       TAB: SALESPERSON
+  ══════════════════════════════════════ -->
+  <div id="tab-salesperson" style="display:none">
+    <div class="card">
+      <div class="card-title"><span class="icon">👥</span> Salesperson Performance</div>
+      <div class="table-wrap" id="sp-table"><div class="placeholder">Loading…</div></div>
+    </div>
+    <div class="chart-card">
+      <h3>📈 Revenue by Salesperson</h3>
+      <canvas id="spChart" height="220"></canvas>
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════
+       TAB: WASTAGE
+  ══════════════════════════════════════ -->
+  <div id="tab-wastage" style="display:none">
+    <div class="metrics-grid" id="wastage-metrics"><div class="placeholder">Loading…</div></div>
+    <div class="grid-2">
+      <div class="chart-card">
+        <h3>🗑️ Wastage Cost per Day</h3>
+        <canvas id="wastageChart" height="200"></canvas>
+      </div>
+      <div class="chart-card">
+        <h3>📦 Wastage by SKU</h3>
+        <canvas id="wastageSkuChart" height="200"></canvas>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════
+       TAB: TARGET vs ACTUAL
+  ══════════════════════════════════════ -->
+  <div id="tab-targets" style="display:none">
+    <div class="card">
+      <div class="card-title"><span class="icon">🎯</span> Target vs Actual — All Salespersons</div>
+      <div class="table-wrap" id="target-table"><div class="placeholder">Loading…</div></div>
+    </div>
+    <div class="chart-card">
+      <h3>📊 Daily Revenue vs Target</h3>
+      <canvas id="targetChart" height="220"></canvas>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>

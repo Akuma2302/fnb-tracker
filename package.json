@@ -1,15 +1,11 @@
 {
-  "name": "fnb-daily-tracker",
-  "version": "3.0.0",
-  "description": "FnB Daily Tracker — Telegram Bot + Multi-Salesperson Dashboard",
-  "main": "index.js",
+  "name": "fnb-tracker",
+  "private": true,
+  "version": "4.0.0",
+  "description": "FnB Daily Tracker — Telegram Bot + Multi-Salesperson Dashboard (monorepo root)",
   "scripts": {
-    "start": "node index.js"
-  },
-  "dependencies": {
-    "dotenv": "^16.3.1",
-    "express": "^4.18.2",
-    "mongodb": "^6.3.0",
-    "node-telegram-bot-api": "^0.64.0"
+    "install:all": "npm install --prefix backend",
+    "start": "npm run start --prefix backend",
+    "dev": "npm run dev --prefix backend"
   }
 }

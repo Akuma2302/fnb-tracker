@@ -1,0 +1,17 @@
+{
+  "name": "fnb-daily-tracker-backend",
+  "version": "4.0.0",
+  "description": "FnB Daily Tracker — Telegram Bot + Multi-Salesperson Dashboard (backend)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "fnb-tracker": "file:..",
+    "mongodb": "^6.3.0",
+    "node-telegram-bot-api": "^0.64.0"
+  }
+}
