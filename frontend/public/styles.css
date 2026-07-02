@@ -239,6 +239,9 @@ body { font-family:'Inter',system-ui,sans-serif; background:var(--bg); color:var
 /* ── Charts ── */
 .chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px 18px; margin-bottom: 12px; }
 .chart-card h3 { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--subtle); margin-bottom: 14px; }
+.chart-hint { font-size: 10.5px; color: var(--subtle); margin: -8px 0 10px; }
+.chart-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.chart-scroll-inner { height: 220px; min-width: 100%; }
 
 /* ── Full-width table ── */
 .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }

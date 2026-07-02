@@ -95,14 +95,21 @@
     </div>
 
     <!-- Charts -->
-    <div class="grid-2">
-      <div class="chart-card">
-        <h3>📈 Revenue Trend</h3>
-        <canvas id="revenueChart" height="190"></canvas>
+    <div class="chart-card">
+      <h3>📈 Revenue Trend</h3>
+      <div class="chart-scroll">
+        <div class="chart-scroll-inner" id="revenueChartInner">
+          <canvas id="revenueChart"></canvas>
+        </div>
       </div>
-      <div class="chart-card">
-        <h3>📊 Revenue vs GP vs Wastage by SKU</h3>
-        <canvas id="skuChart" height="190"></canvas>
+    </div>
+    <div class="chart-card">
+      <h3>📊 Revenue vs GP vs Wastage by SKU</h3>
+      <p class="chart-hint">Swipe left/right to see all SKUs →</p>
+      <div class="chart-scroll">
+        <div class="chart-scroll-inner" id="skuChartInner">
+          <canvas id="skuChart"></canvas>
+        </div>
       </div>
     </div>
 

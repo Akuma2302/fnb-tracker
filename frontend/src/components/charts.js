@@ -25,6 +25,15 @@ function makeChart(key, canvasId, config) {
   charts[key] = new Chart(canvas.getContext('2d'), config);
 }
 
+function sizeChartWrapper(wrapperId, pointCount, pxPerPoint, minWidth) {
+  const wrapper = document.getElementById(wrapperId);
+  if (!wrapper) return;
+  const needed = pointCount * pxPerPoint;
+  wrapper.style.width = needed > minWidth ? `${needed}px` : '100%';
+}
+
+const scrollChartOpts = { ...baseOpts, maintainAspectRatio: false };
+
 export function renderRevenueChart(entries) {
   const labels = [...new Set(entries.map((e) => e.date))].sort();
   const dayRev = labels.map((d) => entries.filter((e) => e.date === d).reduce((a, e) => a + (e.totals?.revenue || 0), 0));
