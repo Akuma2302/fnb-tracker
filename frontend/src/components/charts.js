@@ -36,6 +36,7 @@ const scrollChartOpts = { ...baseOpts, maintainAspectRatio: false };
 
 export function renderRevenueChart(entries) {
   const labels = [...new Set(entries.map((e) => e.date))].sort();
+  sizeChartWrapper('revenueChartInner', labels.length, 70, 600)
   const dayRev = labels.map((d) => entries.filter((e) => e.date === d).reduce((a, e) => a + (e.totals?.revenue || 0), 0));
   const dayGP = labels.map((d) => entries.filter((e) => e.date === d).reduce((a, e) => a + (e.totals?.grossProfit || 0), 0));
 
@@ -48,12 +49,13 @@ export function renderRevenueChart(entries) {
         { label: 'Gross Profit', data: dayGP, borderColor: '#534AB7', borderDash: [5, 3], fill: false, tension: 0.3 },
       ],
     },
-    options: baseOpts,
+    options: scrollChartOpts,
   });
 }
 
 export function renderSKUBarChart(entries, skuDefs) {
   const skus = aggBySKU(entries, skuDefs);
+  sizeChartWrapper('skuChartInner', skus.length, 60, 600);
   makeChart('skuBar', 'skuChart', {
     type: 'bar',
     data: {
@@ -64,7 +66,7 @@ export function renderSKUBarChart(entries, skuDefs) {
         { label: 'Wastage', data: skus.map((s) => +s.wastageCost.toFixed(2)), backgroundColor: 'rgba(226,75,74,0.5)' },
       ],
     },
-    options: baseOpts,
+    options: scrollChartOpts,
   });
 }
 
