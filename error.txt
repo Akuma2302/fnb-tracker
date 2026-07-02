@@ -1,0 +1,28 @@
+==> Downloading cache...
+==> Cloning from https://github.com/Akuma2302/fnb-tracker
+==> Checking out commit 13e6ef0350eae36bc014f95d80427019b0b8d740 in branch main
+==> Downloaded 12MB in 0s. Extraction took 1s.
+==> Using Node.js version 24.14.1 (default)
+==> Docs on specifying a Node.js version: https://render.com/docs/node-version
+==> Running build command 'npm install'...
+added 238 packages, and audited 240 packages in 2s
+80 packages are looking for funding
+  run `npm fund` for details
+9 vulnerabilities (7 moderate, 2 critical)
+To address issues that do not require attention, run:
+  npm audit fix
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+Run `npm audit` for details.
+==> Uploading build...
+==> Uploaded in 1.5s. Compression took 0.6s
+==> Build successful 🎉
+==> Deploying...
+==> Setting WEB_CONCURRENCY=1 by default, based on available CPUs in the instance
+==> Running 'node server.js'
+Startup failed: bad auth : Authentication failed.
+==> Exited with status 1
+==> Common ways to troubleshoot your deploy: https://render.com/docs/troubleshooting-deploys
+==> Running 'node server.js'
+
+what happen here
