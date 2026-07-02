@@ -258,14 +258,23 @@ tr:hover td { background: var(--bg); }
 }
 
 /* ── Chip filter row ── */
-.chip-row { display: flex; gap: 5px; margin-bottom: 12px; flex-wrap: wrap; }
+.chip-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-bottom: 14px;
+}
 .chip {
-  display: inline-flex; align-items: center; gap: 4px; font-size: 11px;
-  padding: 3px 9px; border-radius: 20px; border: 1px solid var(--border);
-  color: var(--muted); background: var(--surface); cursor: pointer;
-  transition: all .15s;
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+  font-size: 11px; padding: 7px 6px; border-radius: 10px;
+  border: 1px solid var(--border); color: var(--muted); background: var(--surface);
+  cursor: pointer; transition: all .15s; text-align: center; white-space: nowrap;
 }
 .chip.active, .chip:hover { background: var(--indigo-light); color: var(--indigo); border-color: transparent; }
+
+@media(max-width:420px) {
+  .chip { font-size: 10.5px; padding: 7px 4px; }
+}
 
 /* ── Divider ── */
 .divider { height: 1px; background: var(--border); margin: 18px 0; }
