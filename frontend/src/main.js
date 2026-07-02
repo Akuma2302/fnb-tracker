@@ -1,6 +1,6 @@
 import { fetchDashboardData } from './services/api.js';
 import { filterEntries } from './utils/dateFilter.js';
-import { populateSalespersonFilter, setLastUpdated } from './layout/header.js';
+import { setLastUpdated } from './layout/header.js';
 import { renderOverview } from './pages/overview.js';
 import { renderSkuDeepDive } from './pages/skuDeepDive.js';
 import { renderSalesperson } from './pages/salesperson.js';
@@ -27,7 +27,6 @@ async function loadData() {
     state.skuDefs = skus || [];
     state.targets = targets || state.targets;
 
-    populateSalespersonFilter(state.allEntries);
     setLastUpdated(state.allEntries);
     render();
   } catch (err) {
@@ -38,7 +37,7 @@ async function loadData() {
 
 // ── Filtering + render dispatch ──
 function getFiltered() {
-  const spVal = document.getElementById('sp-filter').value;
+  const spVal = 'all';
   return filterEntries(state.allEntries, {
     spVal,
     filterMode: state.filterMode,

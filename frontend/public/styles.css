@@ -110,8 +110,13 @@ body { font-family:'Inter',system-ui,sans-serif; background:var(--bg); color:var
 /* ── Metric cards ── */
 .metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 18px; }
 @media(max-width:900px) { .metrics-grid { grid-template-columns: repeat(2,1fr); } }
-@media(max-width:480px) { .metrics-grid { grid-template-columns: 1fr; } }
-
+@media(max-width:480px) {
+  .metrics-grid { grid-template-columns: repeat(2,1fr); gap: 8px; }
+  .metrics-grid .metric-card { padding: 12px 12px; }
+  .metrics-grid .metric-val { font-size: 17px; }
+  .metrics-grid .metric-label { font-size: 9px; }
+  .metrics-grid .metric-sub { font-size: 10px; }
+}
 .metric-card {
   background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--radius-lg); padding: 14px 16px;
