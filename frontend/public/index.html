@@ -72,16 +72,12 @@
         <div class="chip-row" id="sku-sort-chips">
           <div class="chip active" onclick="setSkuSort('revenue',this)">Revenue</div>
           <div class="chip" onclick="setSkuSort('grossProfit',this)">Gross Profit</div>
+          <div class="chip" onclick="setSkuSort('margin',this)">Margin</div>
           <div class="chip" onclick="setSkuSort('wastageCost',this)">Wastage</div>
           <div class="chip" onclick="setSkuSort('sold',this)">Units Sold</div>
+          <div class="chip" onclick="setSkuSort('wasted',this)">Units Wasted</div>
         </div>
-        <div class="sku-header">
-          <span class="col-name">SKU</span>
-          <span class="col-bar"></span>
-          <span class="col-rev">Revenue</span>
-          <span class="col-waste">Waste</span>
-          <span class="col-margin">Margin</span>
-        </div>
+        <div class="sku-header" id="sku-perf-header"></div>
         <div id="sku-perf-rows"><div class="placeholder">Loading…</div></div>
         <div class="note-line" id="sku-note"></div>
       </div>

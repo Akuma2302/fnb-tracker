@@ -1,4 +1,4 @@
-import { fmtRM } from '../utils/format.js';
+import { fmtRM, fmtNum } from '../utils/format.js';
 import { aggBySKU } from '../utils/aggregate.js';
 
 const SKU_COLORS = [
@@ -6,10 +6,34 @@ const SKU_COLORS = [
   '#7C6FE0', '#2FBF91', '#D98A2B', '#5AA6E8', '#E86F6E',
 ];
 
-export function renderSKUPerf(entries, skuDefs, sortKey = 'revenue') {
+const METRICS = {
+  revenue:     { label: 'Revenue',      unit: 'rm'  },
+  grossProfit: { label: 'Gross Profit', unit: 'rm'  },
+  margin:      { label: 'Margin',       unit: 'pct' },
+  wastageCost: { label: 'Wastage',      unit: 'rm'  },
+  sold:        { label: 'Units Sold',   unit: 'num' },
+  wasted:      { label: 'Units Wasted', unit: 'num' },
+};
+
+function formatMetric(unit, val) {
+  if (unit === 'rm') return fmtRM(val);
+  if (unit === 'pct') return `${val.toFixed(0)}%`;
+  return fmtNum(val);
+}
+
+export function renderSKUPerf(entries, skuDefs, metricKey = 'revenue') {
   const el = document.getElementById('sku-perf-rows');
-  const skus = aggBySKU(entries, skuDefs).sort((a, b) => b[sortKey] - a[sortKey]);
-  const maxVal = Math.max(1, ...skus.map((s) => s[sortKey]));
+  const headerEl = document.getElementById('sku-perf-header');
+  const metric = METRICS[metricKey] || METRICS.revenue;
+
+  headerEl.innerHTML = `
+    <span class="col-name">SKU</span>
+    <span class="col-bar"></span>
+    <span class="col-metric">${metric.label}</span>`;
+
+  const skus = aggBySKU(entries, skuDefs)
+    .map((s) => ({ ...s, margin: s.revenue > 0 ? (s.grossProfit / s.revenue) * 100 : 0 }))
+    .sort((a, b) => b[metricKey] - a[metricKey]);
 
   if (!entries.length) {
     el.innerHTML = '<div class="placeholder">No data for this period.</div>';
@@ -17,9 +41,14 @@ export function renderSKUPerf(entries, skuDefs, sortKey = 'revenue') {
     return;
   }
 
+  const maxVal = Math.max(1, ...skus.map((s) => s[metricKey]));
+
   el.innerHTML = skus.map((s, i) => {
-    const margin = s.revenue > 0 ? ((s.grossProfit / s.revenue) * 100).toFixed(0) : 0;
-    const barPct = Math.round((s[sortKey] / maxVal) * 100);
+    const barPct = Math.round((s[metricKey] / maxVal) * 100);
+    const valColor = metricKey === 'wastageCost' ? 'var(--red)'
+      : metricKey === 'margin' ? (s.margin >= 20 ? 'var(--green)' : 'var(--amber)')
+      : 'var(--text)';
+
     return `
       <div class="sku-row">
         <span class="col-name">
@@ -29,9 +58,7 @@ export function renderSKUPerf(entries, skuDefs, sortKey = 'revenue') {
         <span class="col-bar">
           <div class="bar-wrap"><div class="bar-fill" style="width:${barPct}%;background:${SKU_COLORS[i % SKU_COLORS.length]}"></div></div>
         </span>
-        <span class="col-rev sku-rev">${fmtRM(s.revenue)}</span>
-        <span class="col-waste sku-waste">${fmtRM(s.wastageCost)}</span>
-        <span class="col-margin sku-margin" style="color:${margin >= 20 ? 'var(--green)' : 'var(--amber)'}">${margin}%</span>
+        <span class="col-metric sku-metric-val" style="color:${valColor}">${formatMetric(metric.unit, s[metricKey])}</span>
       </div>`;
   }).join('');
 
