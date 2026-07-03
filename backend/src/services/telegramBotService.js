@@ -24,7 +24,7 @@ function sendDatePicker(chatId) {
   const yest = getLocalDate(1);
   bot.sendMessage(
     chatId,
-    'Step 1 — Choose Date\n\nTap a quick option or type your own:',
+    'Choose Date\n\nTap a quick option or type your own:',
     {
       reply_markup: {
         inline_keyboard: [
