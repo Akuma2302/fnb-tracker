@@ -53,7 +53,7 @@ export function renderSKUPerf(entries, skuDefs, metricKey = 'revenue') {
       <div class="sku-row">
         <span class="col-name">
           <div class="sku-name">${s.name}</div>
-          <div class="sku-price">RM${s.salePrice} · RM${s.costPrice}</div>
+          <div class="sku-price">RM${s.salePrice}</div>
         </span>
         <span class="col-bar">
           <div class="bar-wrap"><div class="bar-fill" style="width:${barPct}%;background:${SKU_COLORS[i % SKU_COLORS.length]}"></div></div>
