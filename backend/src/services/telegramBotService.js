@@ -108,7 +108,6 @@ function registerCommands() {
       'FnB Daily Tracker\n\n' +
         '/log      — Log daily sales\n' +
         '/view     — View your last 5 entries\n' +
-        '/setname  — Change your name\n' +
         '/cancel   — Cancel current entry\n' +
         '/help     — Show this menu'
     );
@@ -120,7 +119,6 @@ function registerCommands() {
       'Commands:\n\n' +
         '/log      — Log daily sales by SKU\n' +
         '/view     — View last 5 entries\n' +
-        '/setname  — Update your name\n' +
         '/cancel   — Cancel current entry'
     );
   });
