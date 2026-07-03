@@ -52,8 +52,8 @@ async function sendReceivePrompt(chatId, idx) {
   const sku = SKUS[idx];
   const step = idx + 2; // step 2 … N+1
   const caption =
-    `Step ${step} of ${SKUS.length + 1}\n` +
-    `Name: ${sku.name}\n\n` +
+    `Product ${step - 1} of ${SKUS.length}\n\n` +
+    `Name: ${sku.name}\n` +
     `Sale: RM${sku.salePrice}\n\n` +
     `Did you receive it today?`;
 
