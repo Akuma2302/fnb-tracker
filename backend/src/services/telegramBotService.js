@@ -52,9 +52,10 @@ async function sendReceivePrompt(chatId, idx) {
   const sku = SKUS[idx];
   const step = idx + 2; // step 2 … N+1
   const caption =
-    `Step ${step} of ${SKUS.length + 1} — ${sku.name}\n` +
+    `Step ${step} of ${SKUS.length + 1}\n` +
+    `Name: ${sku.name}\n\n` +
     `Sale: RM${sku.salePrice}\n\n` +
-    `Did you receive ${sku.name} today?`;
+    `Did you receive it today?`;
 
   const keyboard = {
     reply_markup: {

@@ -23,7 +23,7 @@ export function renderItemGrid(entries, skuDefs) {
         </div>
         <div class="item-card-body">
           <div class="item-card-name">${s.name}</div>
-          <div class="item-card-price">RM${s.salePrice.toFixed(2)} · cost RM${s.costPrice.toFixed(2)}</div>
+          <div class="item-card-price">RM${s.salePrice.toFixed(2)}</div>
           <div class="item-card-stats">
             <div><span class="lbl">Sold</span><span class="val">${fmtNum(s.sold)}</span></div>
             <div><span class="lbl">Wasted</span><span class="val" style="color:var(--red)">${fmtNum(s.wasted)}</span></div>
