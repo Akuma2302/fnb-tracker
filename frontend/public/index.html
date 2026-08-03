@@ -19,6 +19,7 @@
     </div>
   </div>
   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+    <a href="/agent.html" target="_blank" rel="noopener" class="btn-refresh" style="text-decoration:none;">🤖 Agent Link</a>
     <button class="btn-refresh" onclick="loadData()">↻ Refresh</button>
   </div>
 </div>
@@ -100,13 +101,16 @@
       </div>
     </div>
     <div class="chart-card">
-      <h3>📊 Revenue vs GP vs Wastage by SKU</h3>
-      <p class="chart-hint">Swipe left/right to see all SKUs →</p>
-      <div class="chart-scroll">
-        <div class="chart-scroll-inner" id="skuChartInner">
-          <canvas id="skuChart"></canvas>
-        </div>
-      </div>
+      <h3>💰 Revenue by SKU</h3>
+      <canvas id="skuRevenueChart"></canvas>
+    </div>
+    <div class="chart-card">
+      <h3>📈 Gross Profit by SKU</h3>
+      <canvas id="skuGPChart"></canvas>
+    </div>
+    <div class="chart-card">
+      <h3>🗑️ Wastage by SKU</h3>
+      <canvas id="skuWastageChart"></canvas>
     </div>
 
   </div><!-- /tab-overview -->
