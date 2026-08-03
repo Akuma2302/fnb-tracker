@@ -101,21 +101,12 @@
       </div>
     </div>
     <div class="chart-card">
-      <h3>💰 Revenue by SKU</h3>
-      <div class="chart-fixed" id="skuRevenueChartWrap">
-        <canvas id="skuRevenueChart"></canvas>
-      </div>
-    </div>
-    <div class="chart-card">
-      <h3>📈 Gross Profit by SKU</h3>
-      <div class="chart-fixed" id="skuGPChartWrap">
-        <canvas id="skuGPChart"></canvas>
-      </div>
-    </div>
-    <div class="chart-card">
-      <h3>🗑️ Wastage by SKU</h3>
-      <div class="chart-fixed" id="skuWastageChartWrap">
-        <canvas id="skuWastageChart"></canvas>
+      <h3>📊 Revenue vs GP vs Wastage by SKU</h3>
+      <p class="chart-hint">Swipe left/right to see all SKUs →</p>
+      <div class="chart-scroll">
+        <div class="chart-scroll-inner" id="skuChartInner">
+          <canvas id="skuChart"></canvas>
+        </div>
       </div>
     </div>
 
