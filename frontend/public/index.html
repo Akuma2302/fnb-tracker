@@ -101,16 +101,12 @@
       </div>
     </div>
     <div class="chart-card">
-      <div class="chart-card-header">
-        <h3>📊 SKU Performance</h3>
-        <select class="sp-select" id="sku-metric-select" onchange="setSkuChartMetric(this.value)">
-          <option value="revenue">💰 Revenue</option>
-          <option value="grossProfit">📈 Gross Profit</option>
-          <option value="wastageCost">🗑️ Wastage</option>
-        </select>
-      </div>
-      <div class="chart-fixed" id="skuMetricChartWrap">
-        <canvas id="skuMetricChart"></canvas>
+      <h3>📊 Revenue vs GP vs Wastage by SKU</h3>
+      <p class="chart-hint">Swipe left/right to see all SKUs →</p>
+      <div class="chart-scroll">
+        <div class="chart-scroll-inner" id="skuChartInner">
+          <canvas id="skuChart"></canvas>
+        </div>
       </div>
     </div>
 

@@ -85,27 +85,15 @@ function renderSKUHorizontalChart(chartKey, canvasId, skus, metricKey, color) {
   makeChart(chartKey, canvasId, {
     type: 'bar',
     data: {
-      labels: sorted.map((s) => s.name),
-      datasets: [{ data: sorted.map((s) => +s[metricKey].toFixed(2)), backgroundColor: sorted.map((_, i) => color + 'CC'), borderRadius: 4 }],
+      labels: skus.map((s) => s.name),
+      datasets: [
+        { label: 'Revenue', data: skus.map((s) => +s.revenue.toFixed(2)), backgroundColor: 'rgba(29,158,117,0.7)' },
+        { label: 'Gross Profit', data: skus.map((s) => +s.grossProfit.toFixed(2)), backgroundColor: 'rgba(83,74,183,0.5)' },
+        { label: 'Wastage', data: skus.map((s) => +s.wastageCost.toFixed(2)), backgroundColor: 'rgba(226,75,74,0.5)' },
+      ],
     },
-    options: horizontalOpts,
+    options: scrollChartOpts,
   });
-}
-
-// Metric options for the SKU Performance chart dropdown.
-const SKU_METRIC_CONFIG = {
-  revenue:     { color: '#1D9E75' },
-  grossProfit: { color: '#534AB7' },
-  wastageCost: { color: '#E24B4A' },
-};
-
-/**
- * Renders the single SKU Performance chart for whichever metric is
- * currently selected in the dropdown (defaults to revenue).
- */
-export function renderSKUMetricChart(entries, skuDefs, metricKey = 'revenue') {
-  const cfg = SKU_METRIC_CONFIG[metricKey] || SKU_METRIC_CONFIG.revenue;
-  renderSKUHorizontalChart('skuMetric', 'skuMetricChart', aggBySKU(entries, skuDefs), metricKey, cfg.color);
 }
 
 export function renderSKUTrendChart(entries, skuDefs) {
