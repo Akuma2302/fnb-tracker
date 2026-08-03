@@ -53,21 +53,55 @@ export function renderRevenueChart(entries) {
   });
 }
 
-export function renderSKUBarChart(entries, skuDefs) {
-  const skus = aggBySKU(entries, skuDefs);
-  sizeChartWrapper('skuChartInner', skus.length, 60, 600);
-  makeChart('skuBar', 'skuChart', {
+const horizontalOpts = {
+  indexAxis: 'y',
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: { legend: { display: false } },
+  scales: {
+    x: { beginAtZero: true, ticks: { color: '#A1A1AA', font: { size: 10 } }, grid: { color: '#F0F0F2' } },
+    y: { ticks: { color: '#71717A', font: { size: 11 } }, grid: { display: false } },
+  },
+};
+
+/**
+ * Sizes a chart's fixed-height wrapper based on how many horizontal bars it
+ * needs to show — more SKUs = taller chart, so every bar stays readable.
+ * IMPORTANT: this sets the *wrapper's* height, not the canvas's. Chart.js's
+ * responsive mode measures the canvas's parent to decide the canvas size; if
+ * we set the canvas's own height instead, the parent grows to fit the canvas,
+ * Chart.js then grows the canvas to fit the (now taller) parent, and so on —
+ * an infinite growth loop. Setting the wrapper's height breaks that loop.
+ */
+function sizeHorizontalCanvas(wrapperId, rowCount) {
+  const wrapper = document.getElementById(wrapperId);
+  if (!wrapper) return;
+  wrapper.style.height = `${Math.max(220, rowCount * 34 + 40)}px`;
+}
+
+function renderSKUHorizontalChart(chartKey, canvasId, skus, metricKey, color) {
+  const sorted = [...skus].sort((a, b) => b[metricKey] - a[metricKey]);
+  sizeHorizontalCanvas(`${canvasId}Wrap`, sorted.length);
+  makeChart(chartKey, canvasId, {
     type: 'bar',
     data: {
-      labels: skus.map((s) => s.name),
-      datasets: [
-        { label: 'Revenue', data: skus.map((s) => +s.revenue.toFixed(2)), backgroundColor: 'rgba(29,158,117,0.7)' },
-        { label: 'Gross Profit', data: skus.map((s) => +s.grossProfit.toFixed(2)), backgroundColor: 'rgba(83,74,183,0.5)' },
-        { label: 'Wastage', data: skus.map((s) => +s.wastageCost.toFixed(2)), backgroundColor: 'rgba(226,75,74,0.5)' },
-      ],
+      labels: sorted.map((s) => s.name),
+      datasets: [{ data: sorted.map((s) => +s[metricKey].toFixed(2)), backgroundColor: sorted.map((_, i) => color + 'CC'), borderRadius: 4 }],
     },
-    options: scrollChartOpts,
+    options: horizontalOpts,
   });
+}
+
+export function renderSKURevenueChart(entries, skuDefs) {
+  renderSKUHorizontalChart('skuRevenue', 'skuRevenueChart', aggBySKU(entries, skuDefs), 'revenue', '#1D9E75');
+}
+
+export function renderSKUGPChart(entries, skuDefs) {
+  renderSKUHorizontalChart('skuGP', 'skuGPChart', aggBySKU(entries, skuDefs), 'grossProfit', '#534AB7');
+}
+
+export function renderSKUWastageChart(entries, skuDefs) {
+  renderSKUHorizontalChart('skuWastage', 'skuWastageChart', aggBySKU(entries, skuDefs), 'wastageCost', '#E24B4A');
 }
 
 export function renderSKUTrendChart(entries, skuDefs) {
