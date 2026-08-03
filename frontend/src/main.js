@@ -18,7 +18,10 @@ const state = {
   customTo: null,
   skuSort: 'revenue',
   skuChartMetric: 'revenue',
+<<<<<<< HEAD
   spChartMetric: 'revenue',
+=======
+>>>>>>> bcde8eb5db098994dd21fd541018727ea45e9435
   activeTab: 'overview',
 };
 
@@ -58,7 +61,10 @@ function render() {
     targets: state.targets,
     skuSort: state.skuSort,
     skuChartMetric: state.skuChartMetric,
+<<<<<<< HEAD
     spChartMetric: state.spChartMetric,
+=======
+>>>>>>> bcde8eb5db098994dd21fd541018727ea45e9435
   };
 
   switch (state.activeTab) {
@@ -115,18 +121,24 @@ function setSkuChartMetric(key) {
   render();
 }
 
+<<<<<<< HEAD
 function setSpChartMetric(key) {
   state.spChartMetric = key;
   render();
 }
 
+=======
+>>>>>>> bcde8eb5db098994dd21fd541018727ea45e9435
 // Expose handlers used by inline onclick/onchange attributes in index.html
 window.switchTab = switchTab;
 window.setFilter = setFilter;
 window.setCustom = setCustom;
 window.setSkuSort = setSkuSort;
 window.setSkuChartMetric = setSkuChartMetric;
+<<<<<<< HEAD
 window.setSpChartMetric = setSpChartMetric;
+=======
+>>>>>>> bcde8eb5db098994dd21fd541018727ea45e9435
 window.loadData = loadData;
 window.render = render;
 
