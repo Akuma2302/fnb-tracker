@@ -72,16 +72,22 @@ no bundler/build step required.
 
    ```
    BOT_TOKEN=your_new_token
+   BOT_USERNAME=your_bot_username_without_the_@
    MONGO_URI=your_new_connection_string
    PORT=3000
    TIMEZONE=Asia/Kuala_Lumpur
    ```
 
+   `BOT_USERNAME` is used by the **Agent Link** page (see below) to build the
+   `https://t.me/<username>` link. Find it via [@BotFather](https://t.me/BotFather)
+   → your bot → it's shown right under the bot's name (without the `@`).
+
 3. **Run**
    ```bash
    npm start
    ```
-   - Dashboard: http://localhost:3000
+   - Dashboard (admin): http://localhost:3000
+   - Agent link (salespersons): http://localhost:3000/agent.html — just a button that opens the Telegram bot, no dashboard access
    - Telegram bot: polling starts automatically
 
 ## SKUs, prices, and images
