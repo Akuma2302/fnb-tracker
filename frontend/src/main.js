@@ -17,6 +17,7 @@ const state = {
   customFrom: null,
   customTo: null,
   skuSort: 'revenue',
+  skuChartMetric: 'revenue',
   activeTab: 'overview',
 };
 
@@ -55,6 +56,7 @@ function render() {
     skuDefs: state.skuDefs,
     targets: state.targets,
     skuSort: state.skuSort,
+    skuChartMetric: state.skuChartMetric,
   };
 
   switch (state.activeTab) {
@@ -106,11 +108,17 @@ function setSkuSort(key, el) {
   render();
 }
 
+function setSkuChartMetric(key) {
+  state.skuChartMetric = key;
+  render();
+}
+
 // Expose handlers used by inline onclick/onchange attributes in index.html
 window.switchTab = switchTab;
 window.setFilter = setFilter;
 window.setCustom = setCustom;
 window.setSkuSort = setSkuSort;
+window.setSkuChartMetric = setSkuChartMetric;
 window.loadData = loadData;
 window.render = render;
 
