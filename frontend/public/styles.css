@@ -234,9 +234,17 @@ body { font-family:'Inter',system-ui,sans-serif; background:var(--bg); color:var
 /* ── Charts ── */
 .chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px 18px; margin-bottom: 12px; }
 .chart-card h3 { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--subtle); margin-bottom: 14px; }
+.chart-card-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+.chart-card-header h3 { margin-bottom: 0; }
 .chart-hint { font-size: 10.5px; color: var(--subtle); margin: -8px 0 10px; }
 .chart-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .chart-scroll-inner { height: 220px; min-width: 100%; }
+
+/* Fixed-height wrapper for charts whose height is set dynamically via JS
+   (e.g. horizontal bar charts with a variable number of rows). Chart.js's
+   responsive mode needs its parent to have an explicit height — otherwise
+   the chart and its container keep growing to match each other. */
+.chart-fixed { position: relative; width: 100%; }
 
 /* ── Full-width table ── */
 .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
