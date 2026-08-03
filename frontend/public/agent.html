@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FnB Sales Bot</title>
+  <link rel="stylesheet" href="/styles.css"/>
+  <style>
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .agent-card {
+      max-width: 380px;
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 32px 28px;
+      text-align: center;
+    }
+    .agent-logo {
+      width: 56px; height: 56px; border-radius: 16px;
+      background: var(--indigo); display: flex; align-items: center;
+      justify-content: center; font-size: 28px; margin: 0 auto 18px;
+    }
+    .agent-title { font-size: 17px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+    .agent-sub { font-size: 13px; color: var(--muted); margin-bottom: 26px; line-height: 1.5; }
+    .agent-btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      width: 100%; padding: 13px 18px; border-radius: var(--radius-md);
+      background: var(--indigo); color: #fff; font-size: 14px; font-weight: 600;
+      text-decoration: none; transition: opacity .15s;
+    }
+    .agent-btn:hover { opacity: .9; }
+    .agent-btn[aria-disabled="true"] { background: var(--border); color: var(--subtle); pointer-events: none; }
+    .agent-note { font-size: 11px; color: var(--subtle); margin-top: 16px; }
+  </style>
+</head>
+<body>
+
+  <div class="agent-card">
+    <div class="agent-logo">🤖</div>
+    <div class="agent-title">FnB Daily Sales Bot</div>
+    <div class="agent-sub">Log today's stock received, units sold, and wastage — right from Telegram.</div>
+    <a id="bot-link" class="agent-btn" href="#" aria-disabled="true">Loading…</a>
+    <div class="agent-note" id="agent-note"></div>
+  </div>
+
+  <script>
+    fetch('/api/bot-info')
+      .then((r) => r.json())
+      .then(({ link }) => {
+        const btn = document.getElementById('bot-link');
+        if (link) {
+          btn.href = link;
+          btn.textContent = '💬 Open Telegram Bot';
+          btn.removeAttribute('aria-disabled');
+          btn.target = '_blank';
+          btn.rel = 'noopener';
+        } else {
+          btn.textContent = 'Bot link not set up yet';
+          document.getElementById('agent-note').textContent =
+            'Ask your admin to set BOT_USERNAME in the server configuration.';
+        }
+      })
+      .catch(() => {
+        const btn = document.getElementById('bot-link');
+        btn.textContent = 'Could not load bot link';
+      });
+  </script>
+
+</body>
+</html>

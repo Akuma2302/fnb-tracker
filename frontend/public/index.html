@@ -19,6 +19,7 @@
     </div>
   </div>
   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+    <a href="/agent.html" target="_blank" rel="noopener" class="btn-refresh" style="text-decoration:none;">🤖 Agent Link</a>
     <button class="btn-refresh" onclick="loadData()">↻ Refresh</button>
   </div>
 </div>
@@ -100,12 +101,16 @@
       </div>
     </div>
     <div class="chart-card">
-      <h3>📊 Revenue vs GP vs Wastage by SKU</h3>
-      <p class="chart-hint">Swipe left/right to see all SKUs →</p>
-      <div class="chart-scroll">
-        <div class="chart-scroll-inner" id="skuChartInner">
-          <canvas id="skuChart"></canvas>
-        </div>
+      <div class="chart-card-header">
+        <h3>📊 SKU Performance</h3>
+        <select class="sp-select" id="sku-metric-select" onchange="setSkuChartMetric(this.value)">
+          <option value="revenue">💰 Revenue</option>
+          <option value="grossProfit">📈 Gross Profit</option>
+          <option value="wastageCost">🗑️ Wastage</option>
+        </select>
+      </div>
+      <div class="chart-fixed" id="skuMetricChartWrap">
+        <canvas id="skuMetricChart"></canvas>
       </div>
     </div>
 
@@ -133,8 +138,17 @@
       <div class="table-wrap" id="sp-table"><div class="placeholder">Loading…</div></div>
     </div>
     <div class="chart-card">
-      <h3>📈 Revenue by Salesperson</h3>
-      <canvas id="spChart" height="220"></canvas>
+      <div class="chart-card-header">
+        <h3>👥 Salesperson Performance</h3>
+        <select class="sp-select" id="sp-metric-select" onchange="setSpChartMetric(this.value)">
+          <option value="revenue">💰 Revenue</option>
+          <option value="grossProfit">📈 Gross Profit</option>
+          <option value="wastageCost">🗑️ Wastage</option>
+        </select>
+      </div>
+      <div class="chart-fixed" id="spChartWrap">
+        <canvas id="spChart"></canvas>
+      </div>
     </div>
   </div>
 

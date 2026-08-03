@@ -3,6 +3,7 @@ const path = require('path');
 
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const healthRoutes = require('./routes/healthRoutes');
+const botRoutes = require('./routes/botRoutes');
 const errorHandler = require('./middlewares/errorHandler');
 
 const FRONTEND_PUBLIC = path.join(__dirname, '../../frontend/public');
@@ -19,6 +20,7 @@ function createApp() {
 
   // API routes
   app.use('/api', dashboardRoutes);
+  app.use('/api', botRoutes);
   app.use('/health', healthRoutes);
 
   app.use(errorHandler);
