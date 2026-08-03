@@ -238,6 +238,12 @@ body { font-family:'Inter',system-ui,sans-serif; background:var(--bg); color:var
 .chart-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .chart-scroll-inner { height: 220px; min-width: 100%; }
 
+/* Fixed-height wrapper for charts whose height is set dynamically via JS
+   (e.g. horizontal bar charts with a variable number of rows). Chart.js's
+   responsive mode needs its parent to have an explicit height — otherwise
+   the chart and its container keep growing to match each other. */
+.chart-fixed { position: relative; width: 100%; }
+
 /* ── Full-width table ── */
 .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 table { width: 100%; border-collapse: collapse; min-width: 600px; }
